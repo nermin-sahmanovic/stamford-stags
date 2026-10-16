@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { CloseIcon, MenuIcon } from "./icons";
+import { signOut } from "@/lib/auth-actions";
+import { CloseIcon, MenuIcon, SignInIcon, SignOutIcon } from "./icons";
 import {
   isActive,
   menuNav,
@@ -14,10 +15,14 @@ import {
 
 type Props = {
   showCaptain?: boolean;
+  signedIn?: boolean;
 };
 
 const buttonClass =
   "flex size-11 items-center justify-center rounded-[10px] text-white hover:bg-navy-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ball";
+
+const itemClass =
+  "flex min-h-12 items-center gap-3 rounded-[10px] px-3 text-base font-semibold no-underline hover:bg-navy-2";
 
 /** Shown while the pathname is unknown during prerender. */
 export function MenuButtonPlaceholder() {
@@ -28,7 +33,7 @@ export function MenuButtonPlaceholder() {
   );
 }
 
-export function MenuDrawer({ showCaptain = true }: Props) {
+export function MenuDrawer({ showCaptain = false, signedIn = false }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -64,9 +69,7 @@ export function MenuDrawer({ showCaptain = true }: Props) {
             href={href}
             onClick={() => setOpen(false)}
             aria-current={active ? "page" : undefined}
-            className={`flex min-h-12 items-center gap-3 rounded-[10px] px-3 text-base font-semibold no-underline hover:bg-navy-2 ${
-              active ? "text-ball" : "text-white"
-            }`}
+            className={`${itemClass} ${active ? "text-ball" : "text-white"}`}
           >
             <Icon size={20} className={active ? "text-ball" : "text-muted"} />
             {label}
@@ -127,6 +130,25 @@ export function MenuDrawer({ showCaptain = true }: Props) {
           </ul>
           <hr className="mx-3 my-2 border-navy-2" />
           <ul className="flex flex-col gap-0.5">{renderLinks(menuNav)}</ul>
+          <hr className="mx-3 my-2 border-navy-2" />
+          {signedIn ? (
+            <form action={signOut}>
+              <button type="submit" className={`${itemClass} w-full text-white`}>
+                <SignOutIcon size={20} className="text-muted" />
+                Sign out
+              </button>
+            </form>
+          ) : (
+            <Link
+              href="/sign-in"
+              onClick={() => setOpen(false)}
+              aria-current={isActive(pathname, "/sign-in") ? "page" : undefined}
+              className={`${itemClass} ${isActive(pathname, "/sign-in") ? "text-ball" : "text-white"}`}
+            >
+              <SignInIcon size={20} className="text-muted" />
+              Sign in
+            </Link>
+          )}
         </nav>
       </div>
     </>

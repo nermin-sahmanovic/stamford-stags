@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { isActive, primaryNav, visibleItems } from "./nav-items";
 
 type Props = {
-  /** Phase 2 wires this to the signed-in player's role. */
+  /** Captain and co-captain only. */
   showCaptain?: boolean;
   /** Set when rendered as a Suspense fallback, before the pathname is known. */
   pathname?: string | null;
@@ -16,7 +16,7 @@ export function BottomTabBar(props: Props) {
   return <TabBar {...props} pathname={pathname} />;
 }
 
-export function TabBar({ showCaptain = true, pathname = null }: Props) {
+export function TabBar({ showCaptain = false, pathname = null }: Props) {
   const items = visibleItems(primaryNav, showCaptain);
 
   return (

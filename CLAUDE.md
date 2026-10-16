@@ -54,6 +54,12 @@ npx supabase db query --linked "select 1"     # ad-hoc SQL against Stags-Dev
 # inserts and a self-approved one is refused. Its test registration is deleted via the linked CLI.
 # Works in Windows PowerShell 5.1 and PowerShell 7; exit code 1 on any failure.
 powershell -ExecutionPolicy Bypass -File scripts/test-anon-access.ps1
+
+# Dev-only sign-in without email (dodges the built-in mailer's limits). Prints a one-time
+# localhost URL via auth.admin.generateLink → /api/auth/callback?token_hash=…; creates the
+# auth user if needed. Refuses unless NODE_ENV=development and .env.local is Stags-Dev.
+# Needs the secret key in SUPABASE_SERVICE_ROLE_KEY. Excluded from deploys (.vercelignore).
+npm run dev-login -- player02@example.com
 ```
 
 Secrets live in `.env.local` (git-ignored): project URL, publishable key (in
@@ -150,7 +156,7 @@ Match `design-reference/`. Those files are the approved look.
 - [x] Prototype approved (design-reference/)
 - [x] Phase 0 — Scaffold and app shell
 - [x] Phase 1 — Database, RLS, seed, RLS tests (cloud Stags-Dev; 59 pgTAP assertions + anon REST check pass)
-- [ ] Phase 2 — Auth and roles
+- [x] Phase 2 — Auth and roles (magic link + token_hash callback; captain, player, stranger and sign-out tested manually)
 - [ ] Phase 3 — Public pages and Join
 - [ ] Phase 4 — Roster and directory
 - [ ] Phase 5 — Matches and availability

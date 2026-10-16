@@ -1,5 +1,6 @@
 import { Suspense, type ReactNode } from "react";
-import { BottomTabBar, TabBar } from "./bottom-tab-bar";
+import { TabBar } from "./bottom-tab-bar";
+import { SessionTabBar } from "./nav-session";
 import { SiteHeader } from "./site-header";
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -11,7 +12,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {children}
       </main>
       <Suspense fallback={<TabBar />}>
-        <BottomTabBar />
+        <SessionTabBar />
       </Suspense>
     </>
   );

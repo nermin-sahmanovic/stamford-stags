@@ -15,7 +15,7 @@ export function TopNav(props: Props) {
 }
 
 /** Desktop (md and up) replacement for the bottom tab bar. */
-export function TopNavLinks({ showCaptain = true, pathname = null }: Props) {
+export function TopNavLinks({ showCaptain = false, pathname = null }: Props) {
   const items = visibleItems(primaryNav, showCaptain);
 
   return (
