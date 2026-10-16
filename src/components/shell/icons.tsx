@@ -152,3 +152,46 @@ export function SignOutIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function ArrowRightIcon(props: IconProps) {
+  return (
+    <Icon strokeWidth={2.2} {...props}>
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </Icon>
+  );
+}
+
+export function ClockIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </Icon>
+  );
+}
+
+export function PinIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" />
+      <circle cx="12" cy="9.5" r="2.5" />
+    </Icon>
+  );
+}
+
+export function CameraIcon(props: IconProps) {
+  return (
+    <Icon strokeWidth={1.8} {...props}>
+      <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+      <circle cx="12" cy="13" r="3.5" />
+    </Icon>
+  );
+}
+
+export function CheckIcon(props: IconProps) {
+  return (
+    <Icon strokeWidth={3} {...props}>
+      <path d="m5 12 5 5 9-10" />
+    </Icon>
+  );
+}

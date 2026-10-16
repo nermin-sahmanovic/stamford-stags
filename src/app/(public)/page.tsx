@@ -1,5 +1,239 @@
-import { PageStub } from "@/components/page-stub";
+import Link from "next/link";
+import { Suspense } from "react";
+import { CourtLinesFull } from "@/components/court-lines";
+import {
+  ArrowRightIcon,
+  CameraIcon,
+  ClockIcon,
+  MailIcon,
+  PinIcon,
+} from "@/components/shell/icons";
+import { Pill, SectionHeading, Skeleton, StatCard, type PillTone } from "@/components/ui";
+import { formatShortDate, formatTime, formatWeekday, formatWeekdayDate } from "@/lib/format";
+import { getPublicNews, getTeamSummary, type NewsPost } from "@/lib/public-data";
 
 export default function HomePage() {
-  return <PageStub title="Stamford Stags" />;
+  return (
+    <>
+      <Hero />
+      <div className="mx-auto max-w-5xl">
+        <Suspense fallback={<StatsSkeleton />}>
+          <Stats />
+        </Suspense>
+        <div className="md:grid md:grid-cols-2 md:gap-2">
+          <Suspense fallback={<div className="px-4 py-2"><Skeleton className="h-[172px]" /></div>}>
+            <NextMatch />
+          </Suspense>
+          <Suspense fallback={<div className="px-4 py-2"><Skeleton className="h-[172px]" /></div>}>
+            <Latest />
+          </Suspense>
+        </div>
+        <ContactCard />
+      </div>
+    </>
+  );
+}
+
+function Hero() {
+  return (
+    <section className="relative overflow-hidden bg-navy px-5 pt-6 pb-7">
+      <CourtLinesFull />
+      <div className="relative mx-auto flex max-w-5xl flex-col gap-4 md:grid md:grid-cols-2 md:items-center md:gap-8">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2 self-start rounded-full bg-ball/15 px-3 py-1.5 text-[12px] font-semibold tracking-[0.08em] text-ball uppercase">
+            <span className="size-1.5 rounded-full bg-ball" />
+            USTA Adult League
+            <Suspense fallback={null}>
+              <SeasonName />
+            </Suspense>
+          </div>
+          <h1 className="font-display text-[60px] leading-[0.9] font-bold tracking-[0.01em] text-white uppercase">
+            Stamford
+            <br />
+            <span className="text-ball">Stags</span>
+          </h1>
+          <p className="text-base leading-normal text-slate-300">
+            Competitive USTA tennis, run like a club. Lineups, availability and match day in one
+            place.
+          </p>
+        </div>
+        <div className="flex flex-col gap-4">
+          {/* Team photo arrives with Phase 8 (photos). */}
+          <div className="flex h-44 flex-col items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-dashed border-slate-600 bg-navy-2 text-[13px] font-medium text-muted">
+            <CameraIcon size={26} />
+            Team photo
+          </div>
+          <div className="flex flex-col gap-2.5">
+            <Link
+              href="/join"
+              className="flex h-[52px] items-center justify-center gap-2 rounded-[12px] bg-ball text-base font-bold text-navy no-underline hover:bg-lime-300"
+            >
+              Join the Team
+              <ArrowRightIcon size={18} />
+            </Link>
+            <div className="grid grid-cols-2 gap-2.5">
+              <Link href="/schedule" className={heroSecondary}>
+                Upcoming Matches
+              </Link>
+              <Link href="/contact" className={heroSecondary}>
+                Contact Captain
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const heroSecondary =
+  "flex h-12 items-center justify-center rounded-[12px] border-[1.5px] border-edge text-[15px] font-semibold text-white no-underline hover:bg-navy-2 hover:text-white";
+
+async function SeasonName() {
+  const { season } = await getTeamSummary();
+  return season ? <> · {season}</> : null;
+}
+
+async function Stats() {
+  const summary = await getTeamSummary();
+  const next = summary.next_match;
+  return (
+    <section
+      aria-label="Season at a glance"
+      className="grid grid-cols-2 gap-2.5 px-4 pt-5 pb-2 md:grid-cols-4"
+    >
+      <StatCard label="Players" value={summary.player_count} note="on the roster" />
+      <StatCard
+        label="Record"
+        value={`${summary.wins}–${summary.losses}`}
+        note={summary.season ? `${summary.season} season` : "this season"}
+      />
+      <StatCard
+        label="Next match"
+        value={next ? formatShortDate(next.starts_at) : "TBA"}
+        note={next ? `${formatWeekday(next.starts_at)} · ${formatTime(next.starts_at)}` : "Schedule coming soon"}
+      />
+      <StatCard
+        label="Open spots"
+        value={summary.open_spots}
+        note={summary.open_spots > 0 ? "Recruiting now" : "Roster is full"}
+        noteClassName={summary.open_spots > 0 ? "font-semibold text-blue-700" : "text-slate-600"}
+      />
+    </section>
+  );
+}
+
+function StatsSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-2.5 px-4 pt-5 pb-2 md:grid-cols-4">
+      {[0, 1, 2, 3].map((i) => (
+        <Skeleton key={i} className="h-[106px]" />
+      ))}
+    </div>
+  );
+}
+
+async function NextMatch() {
+  const { next_match: next } = await getTeamSummary();
+  if (!next) return null;
+  const home = next.home_away === "home";
+  return (
+    <section aria-label="Next match" className="px-4 py-2">
+      <Link
+        href="/schedule"
+        className="relative block overflow-hidden rounded-2xl bg-navy p-4 text-white no-underline hover:bg-navy-2 hover:text-white"
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] font-bold tracking-[0.1em] text-ball uppercase">Next match</span>
+          <span
+            className={`rounded-md px-2 py-1 text-[11px] font-bold tracking-[0.08em] ${
+              home ? "bg-ball text-navy" : "border border-edge text-white"
+            }`}
+          >
+            {home ? "HOME" : "AWAY"}
+          </span>
+        </div>
+        <div className="mt-1.5 font-display text-[30px] leading-[1.1] font-bold">
+          {home ? "vs." : "@"} {next.opponent}
+        </div>
+        <div className="mt-2.5 flex flex-col gap-1.5 text-[14px] text-slate-300">
+          <div className="flex items-center gap-2">
+            <ClockIcon size={16} />
+            {formatWeekdayDate(next.starts_at)} · {formatTime(next.starts_at)}
+          </div>
+          {next.location_name ? (
+            <div className="flex items-center gap-2">
+              <PinIcon size={16} />
+              {next.location_name}
+            </div>
+          ) : null}
+        </div>
+      </Link>
+    </section>
+  );
+}
+
+const newsTone: Record<NewsPost["type"], PillTone> = {
+  result: "navy",
+  announcement: "blue",
+  event: "warn",
+};
+
+async function Latest() {
+  const posts = await getPublicNews(3);
+  return (
+    <section aria-labelledby="latest-heading" className="px-4 pt-4 pb-2 md:pt-2">
+      <div className="mb-2.5">
+        <SectionHeading id="latest-heading">Latest</SectionHeading>
+      </div>
+      {posts.length === 0 ? (
+        <p className="text-[15px] text-slate-600">No news yet. Check back after the next match.</p>
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          {posts.map((post) => (
+            <article
+              key={post.id}
+              className="flex flex-col gap-1.5 rounded-[14px] border border-line bg-white p-3.5"
+            >
+              <Pill tone={newsTone[post.type]}>{post.type}</Pill>
+              <h3 className="text-[17px] font-bold">{post.title}</h3>
+              <p className="text-[14px] text-slate-600">
+                {formatShortDate(post.published_at)}
+                {post.body ? ` · ${post.body}` : null}
+              </p>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ContactCard() {
+  return (
+    <section id="contact" aria-label="Contact" className="px-4 pt-4 pb-6">
+      <div className="flex flex-col gap-3 rounded-2xl border border-line bg-white p-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-3">
+          <div
+            aria-hidden="true"
+            className="flex size-12 flex-none items-center justify-center rounded-full bg-court text-base font-bold text-white"
+          >
+            CP
+          </div>
+          <div>
+            <div className="text-[17px] font-bold">Team Captain</div>
+            <div className="text-[14px] text-slate-600">Questions about joining or match day?</div>
+          </div>
+        </div>
+        <Link
+          href="/contact"
+          className="flex h-12 items-center justify-center gap-2 rounded-[12px] bg-court px-5 text-[15px] font-semibold text-white no-underline hover:bg-blue-700 hover:text-white"
+        >
+          <MailIcon size={18} />
+          Message the captain
+        </Link>
+      </div>
+      <p className="mt-4 text-center text-[12px] text-slate-500">USTA League team · Stamford, CT</p>
+    </section>
+  );
 }

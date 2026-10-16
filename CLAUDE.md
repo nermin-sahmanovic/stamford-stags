@@ -141,7 +141,8 @@ Match `design-reference/`. Those files are the approved look.
 | Eligibility | Rating ≤ season NTRP level (and ≥ `min_ntrp` if set). Playoff eligibility = completed matches ≥ `playoff_min_matches` | **TODO captain:** confirm the league's actual rules (age group, any limits on at-level players per lineup) |
 | Lineup format | 2 singles + 3 doubles | Configurable per season |
 | Weather | Open-Meteo (no key) | Phase 5 |
-| Spam on Join form | Honeypot field + Cloudflare Turnstile | Phase 3 |
+| Spam on public forms (Join, Contact) | Honeypot field + Cloudflare Turnstile | Outside production, missing keys fall back to Cloudflare's always-pass test keys (`src/lib/spam.ts`). **Real `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` are required before deploy**: production fails closed and the forms refuse submissions without them. |
+| Contact form recipient | The team mailbox (`GRAPH_SENDER_MAILBOX`) | Public pages never read `players`, so contact messages don't go to a player address. `sendEmail` in `src/lib/email/send.ts` is a logging stub until Phase 7. |
 
 ## How we work
 
@@ -157,11 +158,11 @@ Match `design-reference/`. Those files are the approved look.
 - [x] Phase 0 — Scaffold and app shell
 - [x] Phase 1 — Database, RLS, seed, RLS tests (cloud Stags-Dev; 59 pgTAP assertions + anon REST check pass)
 - [x] Phase 2 — Auth and roles (magic link + token_hash callback; captain, player, stranger and sign-out tested manually)
-- [ ] Phase 3 — Public pages and Join
+- [x] Phase 3 — Public pages and Join (live seed data; Join insert, honeypot and validation tested; Contact uses the email stub)
 - [ ] Phase 4 — Roster and directory
 - [ ] Phase 5 — Matches and availability
 - [ ] Phase 6 — Lineup builder
 - [ ] Phase 7 — Communications
 - [ ] Phase 8 — Schedule, photos and results
 - [ ] Phase 9 — Captain dashboard and polish
-- [ ] Phase 10 — Deploy
+- [ ] Phase 10 — Deploy (before go-live: real Turnstile keys, Graph mailbox, custom SMTP for auth emails)
