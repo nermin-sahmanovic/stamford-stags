@@ -20,13 +20,38 @@ is the primary design target.
 
 ## Commands
 
+**Docker is unavailable on this machine.** There is no local Supabase, so `supabase start`,
+`db reset`, `db diff` and `test db` don't apply. The dev database is the cloud project
+**Stags-Dev** (ref `jljyylzalwiczrimaguz`), and the CLI is a dev dependency (`npx supabase`).
+
 ```bash
-npm run dev                      # local app
-npx supabase start               # local Supabase (Docker)
-npx supabase db reset            # re-apply migrations + seed.sql
-npx supabase gen types typescript --local > src/lib/database.types.ts
+npm run dev                                   # local app, talks to Stags-Dev via .env.local
 npm run lint && npm run typecheck
+
+# One-time setup per machine
+npx supabase login                            # run in your own terminal (browser sign-in)
+npx supabase link --project-ref jljyylzalwiczrimaguz   # asks for the DB password
+
+# Schema changes (always a new migration file; never edit an applied one)
+npx supabase migration new <name>             # creates supabase/migrations/<ts>_<name>.sql
+npx supabase db push --dry-run                # show what would apply
+npx supabase db push                          # apply new migrations to Stags-Dev
+npx supabase migration list --linked          # local vs remote history
+
+# Seed: `db push --include-seed` runs seed.sql once and records its hash.
+# It reruns only if seed.sql changes, and it does NOT wipe data first. To reseed from
+# scratch, reset the Stags-Dev database in the dashboard, then `db push --include-seed`.
+
+# Types (run in Git Bash, or PowerShell 7; Windows PowerShell 5.1's `>` writes UTF-16)
+npx supabase gen types typescript --linked > src/lib/database.types.ts
+
+# RLS tests: supabase/tests/rls.sql (pgTAP), run in a rolled-back transaction on Stags-Dev
+npm run test:rls                              # wraps `supabase db query --linked`; no Docker
+npx supabase db query --linked "select 1"     # ad-hoc SQL against Stags-Dev
 ```
+
+Secrets live in `.env.local` (git-ignored): project URL, publishable key (in
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`) and secret key (in `SUPABASE_SERVICE_ROLE_KEY`).
 
 ## Folder layout
 
@@ -40,6 +65,7 @@ src/lib/supabase/      server.ts, client.ts, admin.ts (service role, server only
 src/lib/auth.ts        requireMember(), requireCaptain(), getCurrentPlayer()
 src/lib/email/         send.ts (Graph), templates
 supabase/migrations/   SQL migrations (never edit an applied migration; add a new one)
+supabase/tests/        pgTAP tests (rls.sql). Run with `npm run test:rls` (scripts/test-rls.mjs)
 design-reference/      Prototype screens (*.dc.html). Read them for layout, spacing and copy.
 ```
 
@@ -109,14 +135,15 @@ Match `design-reference/`. Those files are the approved look.
 
 - One phase per session, from `docs/PHASES.md`. Start in plan mode and get the plan approved before writing code.
 - Each phase ends with lint and typecheck passing, a manual check at 390px, a commit, and an update to **Status** below.
-- Schema changes are always new migration files. After any schema change, regenerate types.
+- Schema changes are always new migration files. After any schema change, push it, regenerate
+  types and run `npm run test:rls`. New tables or policies get new assertions in `supabase/tests/rls.sql`.
 - When something is ambiguous, ask. Don't invent league rules or business logic.
 
 ## Status
 
 - [x] Prototype approved (design-reference/)
 - [x] Phase 0 — Scaffold and app shell
-- [ ] Phase 1 — Database, RLS, seed, RLS tests
+- [x] Phase 1 — Database, RLS, seed, RLS tests (cloud Stags-Dev; 59 pgTAP assertions pass)
 - [ ] Phase 2 — Auth and roles
 - [ ] Phase 3 — Public pages and Join
 - [ ] Phase 4 — Roster and directory
