@@ -13,7 +13,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(59);
+select plan(67);
 
 -------------------------------------------------------------------------------
 -- Fixtures (as postgres)
@@ -163,6 +163,17 @@ select lives_ok(
 select is(
   (select phone from players where id = '11111111-0000-0000-0000-000000000003'),
   '(203) 555-9999', 'player: update_my_profile() changed own phone');
+select is(
+  (select position_pref::text from players where id = '11111111-0000-0000-0000-000000000003'),
+  'both', 'player: update_my_profile() changed own position');
+update players set ntrp_rating = 5.0 where id = '11111111-0000-0000-0000-000000000003';
+select is(
+  (select ntrp_rating from players where id = '11111111-0000-0000-0000-000000000003'),
+  3.5, 'player: cannot change own rating directly');
+select throws_ok(
+  $$select * from import_players('[{"full_name":"Sneaky","email":"sneaky@rls-test.invalid"}]')$$,
+  '42501', null,
+  'player: cannot import players');
 
 -- Messages and records.
 select is((select count(*)::int from messages), 2, 'player: reads the messages they received');
@@ -224,6 +235,22 @@ select is(
      from match_availability_summary where match_id = '33333333-0000-0000-0000-000000000003'),
   '(8,9,2,1,2)', 'captain: Norwalk summary = needed 8 / available 9 / maybe 2 / out 1 / no response 2');
 
+-- CSV import: upsert by lower(email); blank fields keep existing values; role is never set.
+select is(
+  (select string_agg(email || ':' || outcome, ',' order by email) from import_players($$[
+    {"full_name":"Import New","email":"Import.New@rls-test.invalid","ntrp_rating":3.0,"role":"captain"},
+    {"email":"PLAYER02@example.com","ntrp_rating":4.5,"phone":""},
+    {"full_name":"R. Patel","email":"player04@example.com"}
+  ]$$)),
+  'import.new@rls-test.invalid:created,player02@example.com:updated,player04@example.com:unchanged',
+  'captain: import_players() reports created / updated / unchanged');
+select is(
+  (select role::text from players where email = 'import.new@rls-test.invalid'),
+  'player', 'captain: imported players are always created with the player role');
+select is(
+  (select ntrp_rating || ' ' || phone from players where id = '11111111-0000-0000-0000-000000000002'),
+  '4.5 (203) 555-0102', 'captain: import updates the rating and keeps a phone left blank');
+
 -- Adding a roster row for an existing account links it, and that makes them a member.
 select lives_ok(
   $$insert into players (full_name, email) values ('New Stranger', 'Stranger@rls-test.invalid')$$,
@@ -247,6 +274,22 @@ select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-0000-0000-000000000a03
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000a03","role":"authenticated"}', true);
 set local role authenticated;
 select is((select count(*)::int from players), 0, 'deactivated player: loses access to the roster');
+
+-- Changing a player's email unlinks the old login.
+reset role;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-0000-0000-000000000a01', true);
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000a01","role":"authenticated"}', true);
+set local role authenticated;
+update players set email = 'someone.else@rls-test.invalid' where email = 'Stranger@rls-test.invalid';
+select is(
+  (select user_id from players where email = 'someone.else@rls-test.invalid'),
+  null, 'link trigger: changing the email clears the old login link');
+
+reset role;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-0000-0000-000000000a99', true);
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000a99","role":"authenticated"}', true);
+set local role authenticated;
+select is(is_member(), false, 'stranger: loses membership when their roster email changes');
 
 -------------------------------------------------------------------------------
 reset role;

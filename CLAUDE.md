@@ -75,6 +75,7 @@ src/app/api/           Route handlers (email send, RSVP token, cron, ICS feed)
 src/components/        UI primitives and screen sections
 src/lib/supabase/      server.ts, client.ts, admin.ts (service role, server only)
 src/lib/auth.ts        requireMember(), requireCaptain(), getCurrentPlayer()
+src/lib/roster/        Roster zod schemas (shared by CSV preview and actions), CSV columns, roster queries
 src/lib/email/         send.ts (Graph), templates
 supabase/migrations/   SQL migrations (never edit an applied migration; add a new one)
 supabase/tests/        pgTAP tests (rls.sql). Run with `npm run test:rls` (scripts/test-rls.mjs)
@@ -116,7 +117,8 @@ Match `design-reference/`. Those files are the approved look.
 - `rsvp_tokens` backs the one-tap RSVP links in emails. It is service role only, with no RLS policies.
 - Helpers:
   - `is_member()`, `is_captain()` and `current_player_id()`.
-  - RPCs: `set_my_availability`, `set_my_rsvp`, `update_my_profile`, `eligible_players(match_id)`, `public_team_summary()` and `public_schedule()`.
+  - RPCs: `set_my_availability`, `set_my_rsvp`, `update_my_profile`, `eligible_players(match_id)`, `public_team_summary()`, `public_schedule()` and
+    `import_players(rows)` (captain CSV upsert by `lower(email)`; blank fields keep values; never sets role).
   - Views: `player_records`, `match_availability_summary`.
 
 ## Non-negotiables
@@ -159,7 +161,7 @@ Match `design-reference/`. Those files are the approved look.
 - [x] Phase 1 — Database, RLS, seed, RLS tests (cloud Stags-Dev; 59 pgTAP assertions + anon REST check pass)
 - [x] Phase 2 — Auth and roles (magic link + token_hash callback; captain, player, stranger and sign-out tested manually)
 - [x] Phase 3 — Public pages and Join (live stats, Join validation/submission, honeypot and schedule privacy verified manually; Contact uses the email stub)
-- [ ] Phase 4 — Roster and directory
+- [x] Phase 4 — Roster and directory (20-row test CSV → 15 created / 3 updated / 2 skipped; export re-imports as all unchanged; 67 pgTAP assertions)
 - [ ] Phase 5 — Matches and availability
 - [ ] Phase 6 — Lineup builder
 - [ ] Phase 7 — Communications

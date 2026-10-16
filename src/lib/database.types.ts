@@ -739,6 +739,13 @@ export type Database = {
           rating_ok: boolean
         }[]
       }
+      import_players: {
+        Args: { p_rows: Json }
+        Returns: {
+          email: string
+          outcome: string
+        }[]
+      }
       is_captain: { Args: never; Returns: boolean }
       is_member: { Args: never; Returns: boolean }
       public_schedule: {

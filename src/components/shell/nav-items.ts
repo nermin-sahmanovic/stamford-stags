@@ -11,6 +11,7 @@ import {
   PlayersIcon,
   ResultsIcon,
   ScheduleIcon,
+  UserIcon,
   type IconProps,
 } from "./icons";
 
@@ -36,6 +37,7 @@ export const menuNav: NavItem[] = [
   { href: "/schedule", label: "Schedule", icon: ScheduleIcon },
   { href: "/results", label: "Results", icon: ResultsIcon },
   { href: "/players", label: "Players", icon: PlayersIcon },
+  { href: "/players/me", label: "My profile", icon: UserIcon },
   { href: "/messages", label: "Messages", icon: MessagesIcon },
   { href: "/contact", label: "Contact", icon: MailIcon },
 ];

@@ -1,0 +1,21 @@
+Name,Email,Phone,USTA #,NTRP,Position,Active
+M. Alvarez,player02@example.com,(203) 555-0102,2000000002,4.0,Singles,yes
+D. Kim,player05@example.com,(203) 555-0199,2000000005,3.0,Doubles,yes
+A. Brooks,player10@example.com,(203) 555-0110,2000000010,3.5,Doubles,yes
+Chris Taylor,chris.taylor@example.com,(203) 555-0201,3000000001,3.5,Singles,yes
+Dana Wright,dana.wright@example.com,(203) 555-0202,3000000002,3.0,Doubles,yes
+Evan Brooks-Hale,evan.brookshale@example.com,(203) 555-0203,3000000003,3.5,Both,yes
+Felix Ortega,felix.ortega@example.com,(203) 555-0204,3000000004,2.5,Doubles,yes
+Grace Liu,grace.liu@example.com,(203) 555-0205,3000000005,3.0,Both,yes
+Hannah Moore,hannah.moore@example.com,,3000000006,3.5,Singles,yes
+Ian Walsh,ian.walsh@example.com,(203) 555-0207,,3.0,Doubles,yes
+Jordan Lee,jordan.lee@example,(203) 555-0208,3000000008,3.5,Doubles,yes
+Kevin O'Neill,kevin.oneill@example.com,(203) 555-0209,3000000009,4.0,Singles,yes
+Laura Bennett,laura.bennett@example.com,(203) 555-0210,3000000010,3.5,Both,yes
+Marcus Reed,marcus.reed@example.com,(203) 555-0211,3000000011,9.0,Singles,yes
+Nina Petrova,nina.petrova@example.com,(203) 555-0212,3000000012,3.0,Doubles,yes
+Owen Fischer,owen.fischer@example.com,(203) 555-0213,3000000013,2.5,Both,yes
+Priya Shah,priya.shah@example.com,(203) 555-0214,3000000014,3.5,Doubles,yes
+Quinn Murphy,quinn.murphy@example.com,(203) 555-0215,3000000015,3.0,Singles,no
+Rafael Costa,rafael.costa@example.com,(203) 555-0216,3000000016,4.0,Doubles,yes
+Sofia Romano,sofia.romano@example.com,(203) 555-0217,3000000017,3.5,Both,yes

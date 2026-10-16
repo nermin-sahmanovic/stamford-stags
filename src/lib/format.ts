@@ -26,3 +26,12 @@ export const formatMonthYear = (iso: string) => monthYear.format(new Date(iso));
 export const formatDayOfMonth = (iso: string) => dayOfMonth.format(new Date(iso));
 /** "Oct" */
 export const formatMonthShort = (iso: string) => monthShort.format(new Date(iso));
+
+const isoDate = new Intl.DateTimeFormat("en-CA", {
+  timeZone: TEAM_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+/** "2026-10-24", for file names */
+export const formatIsoDate = (date: Date) => isoDate.format(date);
