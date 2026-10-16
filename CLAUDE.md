@@ -158,7 +158,7 @@ Match `design-reference/`. Those files are the approved look.
 - [x] Phase 0 — Scaffold and app shell
 - [x] Phase 1 — Database, RLS, seed, RLS tests (cloud Stags-Dev; 59 pgTAP assertions + anon REST check pass)
 - [x] Phase 2 — Auth and roles (magic link + token_hash callback; captain, player, stranger and sign-out tested manually)
-- [x] Phase 3 — Public pages and Join (live seed data; Join insert, honeypot and validation tested; Contact uses the email stub)
+- [x] Phase 3 — Public pages and Join (live stats, Join validation/submission, honeypot and schedule privacy verified manually; Contact uses the email stub)
 - [ ] Phase 4 — Roster and directory
 - [ ] Phase 5 — Matches and availability
 - [ ] Phase 6 — Lineup builder
