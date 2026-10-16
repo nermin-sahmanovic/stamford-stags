@@ -1,5 +1,7 @@
 # Stamford Stags — project guide for Claude
 
+@AGENTS.md
+
 Mobile-first website for the Stamford Stags, a USTA adult league tennis team.
 The site has two jobs: cut the captain's admin work, and give players a fast
 phone-first view of the next match. Most visitors are on a phone, so 390px wide
@@ -113,7 +115,7 @@ Match `design-reference/`. Those files are the approved look.
 ## Status
 
 - [x] Prototype approved (design-reference/)
-- [ ] Phase 0 — Scaffold and app shell
+- [x] Phase 0 — Scaffold and app shell
 - [ ] Phase 1 — Database, RLS, seed, RLS tests
 - [ ] Phase 2 — Auth and roles
 - [ ] Phase 3 — Public pages and Join
