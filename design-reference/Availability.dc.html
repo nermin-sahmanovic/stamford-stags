@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stamford Stags — Availability</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&amp;family=Barlow:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#2563EB}a:hover{color:#1D4ED8}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F4F6F9; font-family: 'Barlow', system-ui, sans-serif; color: #0F172A; overflow: hidden">
+
+<header style="flex: none; height: 56px; background: #0F172A; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 2px solid #C7EA46">
+<div style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: 0.06em; color: #FFFFFF; text-transform: uppercase">Availability</div>
+<div style="width: 34px; height: 34px; border-radius: 50%; background: #2563EB; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">ME</div>
+</header>
+
+<main style="flex: 1 1 auto; min-height: 0; overflow-y: auto">
+
+<section style="padding: 16px 16px 4px">
+<h1 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 28px; text-transform: uppercase; letter-spacing: 0.02em">Can you play?</h1>
+<p style="margin: 2px 0 0; font-size: 15px; color: #475569">One tap per match. The captain sees it instantly.</p>
+</section>
+
+<section aria-label="My availability" style="padding: 12px 16px 4px; display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{ matches }}" as="m" hint-placeholder-count="3">
+<div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 14px">
+<div style="display: flex; align-items: center; gap: 14px">
+<div style="flex: none; width: 52px; height: 56px; border-radius: 12px; background: #0F172A; color: #FFFFFF; display: flex; flex-direction: column; align-items: center; justify-content: center">
+<div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: #C7EA46">{{ m.mon }}</div>
+<div style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 26px; line-height: 1">{{ m.day }}</div>
+</div>
+<div style="flex: 1 1 auto; min-width: 0">
+<div style="font-weight: 700; font-size: 17px">{{ m.opp }}</div>
+<div style="font-size: 13px; color: #475569">{{ m.meta }}</div>
+</div>
+</div>
+<div role="group" aria-label="Your response" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 12px">
+<sc-for list="{{ m.opts }}" as="o" hint-placeholder-count="3">
+<sc-if value="{{ o.selYes }}" hint-placeholder-val="{{ false }}">
+<button type="button" aria-pressed="true" onClick="{{ o.pick }}" style="height: 44px; border-radius: 10px; border: 1.5px solid #0F172A; background: #C7EA46; color: #0F172A; font-weight: 700; font-size: 14px; font-family: inherit; cursor: pointer">{{ o.label }}</button>
+</sc-if>
+<sc-if value="{{ o.selMaybe }}" hint-placeholder-val="{{ false }}">
+<button type="button" aria-pressed="true" onClick="{{ o.pick }}" style="height: 44px; border-radius: 10px; border: 1.5px solid #C2410C; background: #FFEDD5; color: #7C2D12; font-weight: 700; font-size: 14px; font-family: inherit; cursor: pointer">{{ o.label }}</button>
+</sc-if>
+<sc-if value="{{ o.selNo }}" hint-placeholder-val="{{ false }}">
+<button type="button" aria-pressed="true" onClick="{{ o.pick }}" style="height: 44px; border-radius: 10px; border: 1.5px solid #0F172A; background: #0F172A; color: #FFFFFF; font-weight: 700; font-size: 14px; font-family: inherit; cursor: pointer">{{ o.label }}</button>
+</sc-if>
+<sc-if value="{{ o.unsel }}" hint-placeholder-val="{{ true }}">
+<button type="button" aria-pressed="false" onClick="{{ o.pick }}" style="height: 44px; border-radius: 10px; border: 1.5px solid #CBD5E1; background: #FFFFFF; color: #334155; font-weight: 600; font-size: 14px; font-family: inherit; cursor: pointer">{{ o.label }}</button>
+</sc-if>
+</sc-for>
+</div>
+<sc-if value="{{ m.noAnswer }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top: 8px; font-size: 13px; font-weight: 600; color: #C2410C">You haven't responded yet</div>
+</sc-if>
+</div>
+</sc-for>
+</section>
+
+<section aria-label="Team availability" style="padding: 18px 16px 8px">
+<div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px">
+<h2 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 24px; text-transform: uppercase; letter-spacing: 0.03em">Team view</h2>
+<span style="font-size: 13px; color: #475569; font-weight: 600">8 players needed</span>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 4px 14px">
+<sc-for list="{{ matches }}" as="m" hint-placeholder-count="3">
+<div style="padding: 12px 0; border-bottom: 1px solid #EEF2F6">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px">
+<span style="font-weight: 600; font-size: 15px">{{ m.short }}</span>
+<span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px">{{ m.pct }}%</span>
+</div>
+<div style="height: 8px; border-radius: 4px; background: #E2E8F0; margin: 6px 0 6px; overflow: hidden"><div style="width: {{ m.pct }}%; height: 8px; border-radius: 4px; background: #2563EB"></div></div>
+<div style="display: flex; justify-content: space-between; font-size: 13px; color: #475569">
+<span>{{ m.availLabel }} · {{ m.respLabel }}</span>
+<sc-if value="{{ m.ok }}" hint-placeholder-val="{{ true }}"><span style="font-weight: 700; color: #1D4ED8">Full lineup</span></sc-if>
+<sc-if value="{{ m.isShort }}" hint-placeholder-val="{{ false }}"><span style="font-weight: 700; color: #C2410C">{{ m.shortLabel }}</span></sc-if>
+</div>
+</div>
+</sc-for>
+<div style="padding: 12px 0">
+<div style="font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 8px">No response yet for Oct 24</div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<span style="font-size: 13px; padding: 5px 10px; border-radius: 999px; background: #F1F5F9; color: #334155; font-weight: 500">A. Brooks</span>
+<span style="font-size: 13px; padding: 5px 10px; border-radius: 999px; background: #F1F5F9; color: #334155; font-weight: 500">K. Ito</span>
+</div>
+</div>
+</div>
+<a href="Captain.dc.html" style="margin-top: 12px; height: 48px; border-radius: 12px; background: #0F172A; color: #FFFFFF; font-weight: 600; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C7EA46" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"></path></svg>
+Captain: send reminders</a>
+</section>
+<div style="height: 16px"></div>
+
+</main>
+
+<nav aria-label="Primary" style="flex: none; background: #0F172A; border-top: 1px solid #1E293B; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 6px 6px 14px">
+<a href="Main.dc.html" style="min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: #94A3B8">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"></path></svg>Home</a>
+<a href="MatchCenter.dc.html" style="min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: #94A3B8">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M5.6 5.6c3 3 3 9.8 0 12.8M18.4 5.6c-3 3-3 9.8 0 12.8"></path></svg>Matches</a>
+<a href="Availability.dc.html" aria-current="page" style="min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: #C7EA46">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"></path></svg>Availability</a>
+<a href="Captain.dc.html" style="min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: #94A3B8">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"></path><path d="m9 12 2 2 4-4"></path></svg>Captain</a>
+</nav>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mine: { m1: 'yes', m2: null, m3: 'maybe' } };
+  }
+  renderVals() {
+    var self = this;
+    var mine = this.state.mine;
+    var ROSTER = 14, NEED = 8;
+    var base = [
+      { id: 'm1', mon: 'OCT', day: '24', opp: 'vs. Norwalk Aces', meta: 'Sat · 10:00 AM · Home', short: 'Oct 24 · Norwalk', yes: 8, nr: 2 },
+      { id: 'm2', mon: 'NOV', day: '1', opp: '@ Darien Drop Shots', meta: 'Sun · 1:00 PM · Away', short: 'Nov 1 · Darien', yes: 5, nr: 3 },
+      { id: 'm3', mon: 'NOV', day: '8', opp: 'vs. New Canaan Netters', meta: 'Sat · 10:00 AM · Home', short: 'Nov 8 · New Canaan', yes: 6, nr: 5 }
+    ];
+    var choices = [{ v: 'yes', label: 'Available' }, { v: 'maybe', label: 'Maybe' }, { v: 'no', label: 'Out' }];
+    var matches = base.map(function (b) {
+      var me = mine[b.id];
+      var avail = b.yes + (me === 'yes' ? 1 : 0);
+      var responded = (ROSTER - 1 - b.nr) + (me ? 1 : 0);
+      var shortBy = Math.max(0, NEED - avail);
+      return {
+        mon: b.mon, day: b.day, opp: b.opp, meta: b.meta, short: b.short,
+        noAnswer: !me,
+        pct: Math.round(avail / ROSTER * 100),
+        availLabel: avail + ' available',
+        respLabel: responded + '/' + ROSTER + ' replied',
+        ok: shortBy === 0,
+        isShort: shortBy > 0,
+        shortLabel: 'Short ' + shortBy,
+        opts: choices.map(function (c) {
+          var sel = me === c.v;
+          return {
+            label: c.label,
+            selYes: sel && c.v === 'yes',
+            selMaybe: sel && c.v === 'maybe',
+            selNo: sel && c.v === 'no',
+            unsel: !sel,
+            pick: function () {
+              self.setState(function (st) {
+                var next = Object.assign({}, st.mine);
+                next[b.id] = st.mine[b.id] === c.v ? null : c.v;
+                return { mine: next };
+              });
+            }
+          };
+        })
+      };
+    });
+    return { matches: matches };
+  }
+}
+</script>
+</body>
+</html>
