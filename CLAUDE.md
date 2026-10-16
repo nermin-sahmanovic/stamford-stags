@@ -48,6 +48,12 @@ npx supabase gen types typescript --linked > src/lib/database.types.ts
 # RLS tests: supabase/tests/rls.sql (pgTAP), run in a rolled-back transaction on Stags-Dev
 npm run test:rls                              # wraps `supabase db query --linked`; no Docker
 npx supabase db query --linked "select 1"     # ad-hoc SQL against Stags-Dev
+
+# Anonymous REST check: what a logged-out browser can do with the publishable key from .env.local.
+# Member tables return exactly '[]', public_team_summary() works, a pending registration
+# inserts and a self-approved one is refused. Its test registration is deleted via the linked CLI.
+# Works in Windows PowerShell 5.1 and PowerShell 7; exit code 1 on any failure.
+powershell -ExecutionPolicy Bypass -File scripts/test-anon-access.ps1
 ```
 
 Secrets live in `.env.local` (git-ignored): project URL, publishable key (in
@@ -143,7 +149,7 @@ Match `design-reference/`. Those files are the approved look.
 
 - [x] Prototype approved (design-reference/)
 - [x] Phase 0 — Scaffold and app shell
-- [x] Phase 1 — Database, RLS, seed, RLS tests (cloud Stags-Dev; 59 pgTAP assertions pass)
+- [x] Phase 1 — Database, RLS, seed, RLS tests (cloud Stags-Dev; 59 pgTAP assertions + anon REST check pass)
 - [ ] Phase 2 — Auth and roles
 - [ ] Phase 3 — Public pages and Join
 - [ ] Phase 4 — Roster and directory
