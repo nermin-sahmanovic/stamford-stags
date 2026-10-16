@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Bash(*supabase*db reset*)",
+      "PowerShell(*supabase*db reset*)",
+
+      "Bash(git*push*--force*)",
+      "Bash(git*push* -f*)",
+      "Bash(git*push* +*)",
+      "PowerShell(git*push*--force*)",
+      "PowerShell(git*push* -f*)",
+      "PowerShell(git*push* +*)",
+      "Bash(git*reset*--hard*)",
+      "PowerShell(git*reset*--hard*)",
+
+      "Edit(/supabase/migrations/20261016000000_init.sql)",
+      "Bash(*rm *migrations*)",
+      "Bash(*mv *migrations*)",
+      "Bash(*sed -i*migrations*)",
+      "Bash(*>*migrations*)",
+      "Bash(*git checkout*migrations*)",
+      "Bash(*git restore*migrations*)",
+      "Bash(*supabase*migration squash*)",
+      "PowerShell(*Remove-Item*migrations*)",
+      "PowerShell(*rm *migrations*)",
+      "PowerShell(*del *migrations*)",
+      "PowerShell(*Move-Item*migrations*)",
+      "PowerShell(*mv *migrations*)",
+      "PowerShell(*Set-Content*migrations*)",
+      "PowerShell(*Out-File*migrations*)",
+      "PowerShell(*>*migrations*)",
+      "PowerShell(*git checkout*migrations*)",
+      "PowerShell(*git restore*migrations*)",
+      "PowerShell(*supabase*migration squash*)",
+
+      "Read(/.env.local)",
+      "Read(**/.env.local)",
+      "Bash(*.env.local*)",
+      "PowerShell(*.env.local*)"
+    ]
+  }
+}
