@@ -82,5 +82,45 @@ export const availabilityInputSchema = z.object({
   status: z.enum(AVAILABILITY).nullable(),
 });
 
+/** "3" → "Ct 3" (the stored format); anything else is kept as typed; blank → null. */
+export function courtLabel(input: string): string | null {
+  const value = input.trim();
+  if (value === "") return null;
+  return /^\d{1,3}$/.test(value) ? `Ct ${value}` : value;
+}
+
+/** Bare court number for the builder input: "Ct 3" → "3", other labels as stored. */
+export function courtInput(label: string | null): string {
+  return label?.match(/^Ct (\d{1,3})$/)?.[1] ?? label ?? "";
+}
+
+export const lineupInputSchema = z.object({
+  slots: z
+    .array(
+      z.object({
+        line_type: z.enum(["singles", "doubles"]),
+        line_number: z.number().int().min(1).max(5),
+        seat: z.union([z.literal(1), z.literal(2)]),
+        player_id: z.guid(),
+        court: z.string().trim().max(20, "Keep court names under 20 characters."),
+      }),
+    )
+    .max(10)
+    .refine((slots) => new Set(slots.map((s) => s.player_id)).size === slots.length, {
+      message: "A player can only be on one line.",
+    })
+    .refine((slots) => new Set(slots.map((s) => `${s.line_type}${s.line_number}-${s.seat}`)).size === slots.length, {
+      message: "Two players are in the same seat.",
+    }),
+  publish: z.boolean(),
+});
+
+export type LineupInput = z.input<typeof lineupInputSchema>;
+
+export const rsvpInputSchema = z.object({
+  matchId: z.guid(),
+  rsvp: z.enum(["confirmed", "declined"]),
+});
+
 /** Result of a server action called from code rather than a form post. */
 export type ActionResult = { ok: true } | { ok: false; message: string };

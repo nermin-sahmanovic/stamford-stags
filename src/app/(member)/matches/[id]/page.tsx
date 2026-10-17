@@ -31,5 +31,5 @@ async function Match({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [me, data] = await Promise.all([requireMember(), getMatchDetail(id)]);
   if (!data) notFound();
-  return <MatchDetail data={data} isCaptain={me.isCaptain} />;
+  return <MatchDetail data={data} meId={me.id} isCaptain={me.isCaptain} />;
 }

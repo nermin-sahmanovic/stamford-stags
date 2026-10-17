@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { ActionResult } from "@/lib/matches/schemas";
-import { deleteMatch, setLineupPublished } from "../actions";
+import { deleteMatch, unpublishLineup } from "../actions";
 
 const outlineButton =
   "h-11 rounded-[10px] border-[1.5px] px-4 text-[14px] font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-court disabled:opacity-60";
@@ -34,14 +35,19 @@ export function ErrorText({ error }: { error: string | null }) {
   ) : null;
 }
 
+/** Lineup status on the match page. Publishing happens in the builder (it resets RSVPs and notifies). */
 export function LineupPublish({
   matchId,
   published,
   slotCount,
+  declined,
+  editable,
 }: {
   matchId: string;
   published: boolean;
   slotCount: number;
+  declined: number;
+  editable: boolean;
 }) {
   const { error, pending, run } = useAction();
   return (
@@ -58,20 +64,29 @@ export function LineupPublish({
         )}
       </p>
       <p className="mt-1 text-[13px] text-slate-600">
-        {slotCount === 0
-          ? "No players are in the lineup yet. The lineup builder arrives in a later update."
-          : `${slotCount} players in the lineup.`}
+        {slotCount === 0 ? "No players are in the lineup yet." : `${slotCount} players in the lineup.`}
+        {declined > 0 ? <span className="font-semibold text-warn"> {declined} declined.</span> : null}
       </p>
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() => run(() => setLineupPublished(matchId, !published))}
-        className={`${outlineButton} mt-3 ${
-          published ? "border-slate-300 text-navy hover:bg-slate-50" : "border-navy bg-navy text-white hover:bg-navy-2"
-        }`}
-      >
-        {pending ? "Saving…" : published ? "Unpublish lineup" : "Publish lineup"}
-      </button>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {editable ? (
+          <Link
+            href={`/captain/matches/${matchId}/lineup`}
+            className={`${outlineButton} flex items-center border-navy bg-navy text-white no-underline hover:bg-navy-2 hover:text-white`}
+          >
+            {slotCount === 0 ? "Build lineup" : "Edit lineup"}
+          </Link>
+        ) : null}
+        {published ? (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => run(() => unpublishLineup(matchId))}
+            className={`${outlineButton} border-slate-300 text-navy hover:bg-slate-50`}
+          >
+            {pending ? "Saving…" : "Unpublish lineup"}
+          </button>
+        ) : null}
+      </div>
       <ErrorText error={error} />
     </div>
   );

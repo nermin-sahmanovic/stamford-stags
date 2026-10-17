@@ -121,8 +121,10 @@ Match `design-reference/`. Those files are the approved look.
 - `rsvp_tokens` backs the one-tap RSVP links in emails. It is service role only, with no RLS policies.
 - Helpers:
   - `is_member()`, `is_captain()` and `current_player_id()`.
-  - RPCs: `set_my_availability`, `set_my_rsvp`, `update_my_profile`, `eligible_players(match_id)`, `public_team_summary()`, `public_schedule()` and
-    `import_players(rows)` (captain CSV upsert by `lower(email)`; blank fields keep values; never sets role).
+  - RPCs: `set_my_availability`, `set_my_rsvp` (published lineup, match not started), `update_my_profile`, `eligible_players(match_id)`, `public_team_summary()`, `public_schedule()` and
+    `import_players(rows)` (captain CSV upsert by `lower(email)`; blank fields keep values; never sets role) and
+    `save_lineup(match_id, slots, publish)` (captain builder: replaces slots in one transaction; first publish sets every
+    RSVP to pending, later saves reset only players new to a line; returns the player ids to notify).
   - Views: `player_records`, `match_availability_summary` (active players only; includes `roster_size`).
 
 ## Non-negotiables
@@ -145,7 +147,7 @@ Match `design-reference/`. Those files are the approved look.
 | Team email | Microsoft Graph `sendMail` from a team mailbox | App registration with the Mail.Send application permission, scoped to that one mailbox with Exchange RBAC for Applications. Fallback if there's no M365 mailbox: Resend. |
 | Auth emails (magic links) | Custom SMTP in Supabase | Supabase's built-in mailer is heavily rate-limited, so it isn't fit for production |
 | Eligibility | Rating ≤ season NTRP level (and ≥ `min_ntrp` if set). Playoff eligibility = completed matches ≥ `playoff_min_matches` | **TODO captain:** confirm the league's actual rules (age group, any limits on at-level players per lineup) |
-| Lineup format | 2 singles + 3 doubles | Configurable per season |
+| Lineup format | 1 singles + 3 doubles (7 players), confirmed by the captain | Default for every season (`seasons.singles_lines` / `doubles_lines`); the lineup builder, results form and RLS tests use it |
 | Weather | Open-Meteo (no key), `src/lib/weather.ts` | Forecast only up to 15 days ahead ("Forecast available closer to match day" beyond that). Failures show "Forecast unavailable right now" and are cached for minutes only. Geocoding uses Open-Meteo's geocoder too. |
 | Spam on public forms (Join, Contact) | Honeypot field + Cloudflare Turnstile | Outside production, missing keys fall back to Cloudflare's always-pass test keys (`src/lib/spam.ts`). **Real `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` are required before deploy**: production fails closed and the forms refuse submissions without them. |
 | Contact form recipient | The team mailbox (`GRAPH_SENDER_MAILBOX`) | Public pages never read `players`, so contact messages don't go to a player address. `sendEmail` in `src/lib/email/send.ts` is a logging stub until Phase 7. |
@@ -167,7 +169,7 @@ Match `design-reference/`. Those files are the approved look.
 - [x] Phase 3 — Public pages and Join (live stats, Join validation/submission, honeypot and schedule privacy verified manually; Contact uses the email stub)
 - [x] Phase 4 — Roster and directory (20-row test CSV → 15 created / 3 updated / 2 skipped; export re-imports as all unchanged; 67 pgTAP assertions)
 - [x] Phase 5 — Matches and availability (one-tap availability, live team view and shortages, match create/edit, results updating the record and forecast behavior verified manually; 83 pgTAP assertions + anon REST check pass)
-- [ ] Phase 6 — Lineup builder
+- [x] Phase 6 — Lineup builder (1 singles + 3 doubles; full lineup under 2 minutes on a phone, ineligible and double-booking flags, publish, and a player decline flagged on the captain view verified manually; 103 pgTAP assertions + anon REST check pass)
 - [ ] Phase 7 — Communications
 - [ ] Phase 8 — Schedule, photos and results
 - [ ] Phase 9 — Captain dashboard and polish

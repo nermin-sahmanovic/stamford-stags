@@ -5,13 +5,17 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireCaptain } from "@/lib/auth";
 import { echoValues, firstFieldErrors, type FormState } from "@/lib/form-state";
+import { notifyLineupPublished } from "@/lib/email/notify";
 import { geocodeAddress } from "@/lib/matches/geocode";
 import {
   checklistLabelSchema,
+  courtLabel,
   DEFAULT_CHECKLIST,
+  lineupInputSchema,
   matchFormSchema,
   resultsSchema,
   type ActionResult,
+  type LineupInput,
 } from "@/lib/matches/schemas";
 import { PUBLIC_TAG } from "@/lib/public-data";
 import { createClient } from "@/lib/supabase/server";
@@ -38,7 +42,7 @@ const formError = (message: string, formData: FormData, fieldErrors: Record<stri
   values: echoValues(formData),
 });
 
-const fail = (message: string, error?: { message: string }): ActionResult => {
+const fail = (message: string, error?: { message: string }): { ok: false; message: string } => {
   if (error) console.error("[matches]", message, error.message);
   return { ok: false, message: error ? SOMETHING_WRONG : message };
 };
@@ -147,19 +151,69 @@ export async function deleteMatch(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
-export async function setLineupPublished(id: string, published: boolean): Promise<ActionResult> {
+/** Hide a lineup from players again. Publishing goes through saveLineup (RSVP reset + notify). */
+export async function unpublishLineup(id: string): Promise<ActionResult> {
   await requireCaptain();
   if (!isId(id)) return fail(NOT_FOUND);
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("matches")
-    .update({ lineup_published_at: published ? new Date().toISOString() : null })
+    .update({ lineup_published_at: null })
     .eq("id", id)
     .select("id");
-  if (error) return fail("publish failed", error);
+  if (error) return fail("unpublish failed", error);
   if (data.length === 0) return fail(NOT_FOUND);
   matchesChanged();
   return { ok: true };
+}
+
+export type SaveLineupResult = { ok: true; notified: number } | { ok: false; message: string };
+
+/**
+ * The lineup builder's single save. save_lineup() replaces the match's slots in one transaction
+ * and returns who to notify: everyone on first publish, only players new to a line after that.
+ */
+export async function saveLineup(matchId: string, input: LineupInput): Promise<SaveLineupResult> {
+  await requireCaptain();
+  if (!isId(matchId)) return fail(NOT_FOUND);
+  const parsed = lineupInputSchema.safeParse(input);
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check the lineup.");
+
+  const supabase = await createClient();
+  const { data: before, error: readError } = await supabase
+    .from("matches")
+    .select("lineup_published_at")
+    .eq("id", matchId)
+    .maybeSingle();
+  if (readError) return fail("lineup read failed", readError);
+  if (!before) return fail(NOT_FOUND);
+
+  const { data: notify, error } = await supabase.rpc("save_lineup", {
+    p_match_id: matchId,
+    p_publish: parsed.data.publish,
+    p_slots: parsed.data.slots.map((s) => ({
+      line_type: s.line_type,
+      line_number: s.line_number,
+      seat: s.seat,
+      player_id: s.player_id,
+      court_label: courtLabel(s.court),
+    })),
+  });
+  if (error) {
+    if (error.code === "23505") return fail("A player can only be on one line.");
+    if (error.code === "22023" || error.code === "P0002") return fail(error.message);
+    return fail("lineup save failed", error);
+  }
+
+  if (notify.length > 0) {
+    await notifyLineupPublished({
+      matchId,
+      playerIds: notify,
+      kind: before.lineup_published_at ? "updated" : "published",
+    });
+  }
+  matchesChanged();
+  return { ok: true, notified: notify.length };
 }
 
 // --- Checklist -------------------------------------------------------------

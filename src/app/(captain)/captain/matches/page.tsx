@@ -61,7 +61,12 @@ async function MatchList() {
             <ul className="mt-2 grid gap-2.5 md:grid-cols-2">
               {group.matches.map((match) => (
                 <li key={match.id}>
-                  <MatchRow match={match} href={`/captain/matches/${match.id}`} meta={meta(match)} />
+                  <MatchRow
+                    match={match}
+                    href={`/captain/matches/${match.id}`}
+                    meta={meta(match)}
+                    alert={match.status === "scheduled" && match.declined > 0 ? `${match.declined} declined` : undefined}
+                  />
                 </li>
               ))}
             </ul>

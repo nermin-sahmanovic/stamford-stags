@@ -68,16 +68,18 @@ async function MatchCenter({ searchParams }: { searchParams: Promise<{ tab?: str
         ))}
       </nav>
 
-      {tab === "upcoming" ? <Upcoming upcoming={upcoming} isCaptain={me.isCaptain} /> : <Results results={results} />}
+      {tab === "upcoming" ? <Upcoming upcoming={upcoming} meId={me.id} isCaptain={me.isCaptain} /> : <Results results={results} />}
     </>
   );
 }
 
 async function Upcoming({
   upcoming,
+  meId,
   isCaptain,
 }: {
   upcoming: Awaited<ReturnType<typeof getMatchCenter>>["upcoming"];
+  meId: string;
   isCaptain: boolean;
 }) {
   if (upcoming.length === 0) {
@@ -89,7 +91,7 @@ async function Upcoming({
   return (
     <>
       <div className="mt-3.5">
-        {detail ? <MatchDetail data={detail} isCaptain={isCaptain} eyebrow="Next match" /> : null}
+        {detail ? <MatchDetail data={detail} meId={meId} isCaptain={isCaptain} eyebrow="Next match" /> : null}
       </div>
       {later.length > 0 ? (
         <section aria-labelledby="coming-up" className="mt-4">

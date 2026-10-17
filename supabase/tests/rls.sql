@@ -13,7 +13,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(83);
+select plan(103);
 
 -------------------------------------------------------------------------------
 -- Fixtures (as postgres)
@@ -156,7 +156,7 @@ select is((select count(*)::int from lineup_slots where match_id = '33333333-000
 reset role;
 update matches set lineup_published_at = now() where id = '33333333-0000-0000-0000-000000000003';
 set local role authenticated;
-select is((select count(*)::int from lineup_slots where match_id = '33333333-0000-0000-0000-000000000003'), 8,
+select is((select count(*)::int from lineup_slots where match_id = '33333333-0000-0000-0000-000000000003'), 7,
   'player: reads a published lineup');
 update matches set lineup_published_at = null where id = '33333333-0000-0000-0000-000000000003';
 select ok((select lineup_published_at is not null from matches where id = '33333333-0000-0000-0000-000000000003'),
@@ -281,7 +281,7 @@ select is(
 select is(
   (select row(players_needed, available, maybe, unavailable, no_response)::text
      from match_availability_summary where match_id = '33333333-0000-0000-0000-000000000003'),
-  '(8,9,2,1,2)', 'captain: Norwalk summary = needed 8 / available 9 / maybe 2 / out 1 / no response 2');
+  '(7,9,2,1,2)', 'captain: Norwalk summary = needed 7 / available 9 / maybe 2 / out 1 / no response 2');
 select is(
   (select roster_size::int from match_availability_summary where match_id = '33333333-0000-0000-0000-000000000003'),
   14, 'captain: summary roster_size counts active players');
@@ -297,7 +297,7 @@ update players set is_active = true where id = '11111111-0000-0000-0000-00000000
 update matches set lineup_published_at = null where id = '33333333-0000-0000-0000-000000000003';
 select ok((select lineup_published_at is null from matches where id = '33333333-0000-0000-0000-000000000003'),
   'captain: can unpublish a lineup');
-select is((select count(*)::int from lineup_slots where match_id = '33333333-0000-0000-0000-000000000003'), 8,
+select is((select count(*)::int from lineup_slots where match_id = '33333333-0000-0000-0000-000000000003'), 7,
   'captain: reads an unpublished (draft) lineup');
 select lives_ok(
   $$insert into line_results (match_id, line_type, line_number, won, score)
@@ -314,6 +314,120 @@ select is(
   (select status || ' ' || team_points || '-' || opponent_points from matches
     where id = '33333333-0000-0000-0000-000000000003'),
   'completed 3-2', 'captain: can record the team result');
+
+-- Lineup builder: save_lineup() on Darien (match 4, no lineup yet).
+--   Draft: S1 J. Chen (P03), D1 P04 + P05, D2 P02 (seat 2 empty).
+select lives_ok(
+  $$select save_lineup('33333333-0000-0000-0000-000000000004', '[
+      {"line_type":"singles","line_number":1,"seat":1,"player_id":"11111111-0000-0000-0000-000000000003","court_label":" Ct 3 "},
+      {"line_type":"doubles","line_number":2,"seat":1,"player_id":"11111111-0000-0000-0000-000000000002","court_label":"Ct 6"},
+      {"line_type":"doubles","line_number":1,"seat":1,"player_id":"11111111-0000-0000-0000-000000000004","court_label":"Ct 5"},
+      {"line_type":"doubles","line_number":1,"seat":2,"player_id":"11111111-0000-0000-0000-000000000005","court_label":"Ct 5"}
+    ]'::jsonb, false)$$,
+  'captain: save_lineup() saves a draft');
+select is(
+  (select count(*)::int || ' ' || min(court_label) from lineup_slots where match_id = '33333333-0000-0000-0000-000000000004'),
+  '4 Ct 3', 'captain: draft has 4 slots with trimmed court labels');
+select ok((select lineup_published_at is null from matches where id = '33333333-0000-0000-0000-000000000004'),
+  'captain: a draft save does not publish');
+select throws_ok(
+  $$select save_lineup('33333333-0000-0000-0000-000000000004', '[
+      {"line_type":"singles","line_number":2,"seat":1,"player_id":"11111111-0000-0000-0000-000000000003"}
+    ]'::jsonb, false)$$,
+  '22023', null, 'captain: save_lineup() refuses S2 (the format is 1 singles + 3 doubles)');
+select throws_ok(
+  $$select save_lineup('33333333-0000-0000-0000-000000000004', '[
+      {"line_type":"singles","line_number":1,"seat":2,"player_id":"11111111-0000-0000-0000-000000000003"}
+    ]'::jsonb, false)$$,
+  '22023', null, 'captain: save_lineup() refuses a second seat on a singles line');
+select throws_ok(
+  $$select save_lineup('33333333-0000-0000-0000-000000000004', '[
+      {"line_type":"doubles","line_number":4,"seat":1,"player_id":"11111111-0000-0000-0000-000000000003"}
+    ]'::jsonb, false)$$,
+  '22023', null, 'captain: save_lineup() refuses D4');
+select throws_ok(
+  $$select save_lineup('33333333-0000-0000-0000-000000000004', '[
+      {"line_type":"singles","line_number":1,"seat":1,"player_id":"11111111-0000-0000-0000-000000000003"},
+      {"line_type":"doubles","line_number":3,"seat":1,"player_id":"11111111-0000-0000-0000-000000000003"}
+    ]'::jsonb, false)$$,
+  '23505', null, 'captain: save_lineup() refuses a double-booked player');
+select throws_ok(
+  $$select save_lineup('33333333-0000-0000-0000-000000000004', '[
+      {"line_type":"singles","line_number":1,"seat":1,"player_id":"aaaaaaaa-0000-0000-0000-000000000a99"}
+    ]'::jsonb, false)$$,
+  '22023', null, 'captain: save_lineup() refuses someone not on the active roster');
+select is((select count(*)::int from lineup_slots where match_id = '33333333-0000-0000-0000-000000000004'), 4,
+  'captain: a refused save leaves the draft untouched');
+-- First publish: every seat goes to pending (even one marked confirmed in the draft) and everyone is notified.
+update lineup_slots set rsvp = 'confirmed'
+ where match_id = '33333333-0000-0000-0000-000000000004' and player_id = '11111111-0000-0000-0000-000000000004';
+select is(
+  (select count(*)::int from save_lineup('33333333-0000-0000-0000-000000000004', '[
+      {"line_type":"singles","line_number":1,"seat":1,"player_id":"11111111-0000-0000-0000-000000000003","court_label":"Ct 3"},
+      {"line_type":"doubles","line_number":2,"seat":1,"player_id":"11111111-0000-0000-0000-000000000002","court_label":"Ct 6"},
+      {"line_type":"doubles","line_number":1,"seat":1,"player_id":"11111111-0000-0000-0000-000000000004","court_label":"Ct 5"},
+      {"line_type":"doubles","line_number":1,"seat":2,"player_id":"11111111-0000-0000-0000-000000000005","court_label":"Ct 5"}
+    ]'::jsonb, true)),
+  4, 'captain: first publish returns every player to notify');
+select is(
+  (select string_agg(distinct rsvp::text, ',') from lineup_slots where match_id = '33333333-0000-0000-0000-000000000004'),
+  'pending', 'captain: first publish sets every RSVP to pending');
+select ok((select lineup_published_at is not null from matches where id = '33333333-0000-0000-0000-000000000004'),
+  'captain: publishing sets lineup_published_at');
+-- Republish with D1 seat 2 changed (P05 -> P06), D1 partners kept, S1 court changed.
+update lineup_slots set rsvp = 'confirmed' where match_id = '33333333-0000-0000-0000-000000000004';
+select is(
+  (select string_agg(id::text, ',') from save_lineup('33333333-0000-0000-0000-000000000004', '[
+      {"line_type":"singles","line_number":1,"seat":1,"player_id":"11111111-0000-0000-0000-000000000003","court_label":"Ct 8"},
+      {"line_type":"doubles","line_number":2,"seat":1,"player_id":"11111111-0000-0000-0000-000000000002","court_label":"Ct 6"},
+      {"line_type":"doubles","line_number":1,"seat":1,"player_id":"11111111-0000-0000-0000-000000000006","court_label":"Ct 5"},
+      {"line_type":"doubles","line_number":1,"seat":2,"player_id":"11111111-0000-0000-0000-000000000004","court_label":"Ct 5"}
+    ]'::jsonb, true) as id),
+  '11111111-0000-0000-0000-000000000006', 'captain: republish notifies only the player new to a line');
+select is(
+  (select string_agg(player_id::text || '=' || rsvp, ',' order by player_id) from lineup_slots
+    where match_id = '33333333-0000-0000-0000-000000000004'),
+  '11111111-0000-0000-0000-000000000002=confirmed,11111111-0000-0000-0000-000000000003=confirmed,'
+  || '11111111-0000-0000-0000-000000000004=confirmed,11111111-0000-0000-0000-000000000006=pending',
+  'captain: republish resets only the changed seat (seat swap and court change keep RSVP)');
+
+-- The player side of the published Darien lineup (J. Chen is on S1).
+reset role;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-0000-0000-000000000a03', true);
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000a03","role":"authenticated"}', true);
+set local role authenticated;
+select throws_ok(
+  $$select save_lineup('33333333-0000-0000-0000-000000000004', '[]'::jsonb, false)$$,
+  '42501', null, 'player: cannot call save_lineup()');
+select is((select count(*)::int from lineup_slots where match_id = '33333333-0000-0000-0000-000000000004'), 4,
+  'player: reads the published Darien lineup');
+select lives_ok(
+  $$select set_my_rsvp('33333333-0000-0000-0000-000000000004', 'declined')$$,
+  'player: can decline a published lineup spot');
+reset role;
+update matches set lineup_published_at = null where id = '33333333-0000-0000-0000-000000000004';
+set local role authenticated;
+select throws_ok(
+  $$select set_my_rsvp('33333333-0000-0000-0000-000000000004', 'confirmed')$$,
+  'P0002', null, 'player: set_my_rsvp() refuses an unpublished lineup');
+reset role;
+update matches set lineup_published_at = now(), starts_at = now() - interval '1 hour'
+ where id = '33333333-0000-0000-0000-000000000004';
+set local role authenticated;
+select throws_ok(
+  $$select set_my_rsvp('33333333-0000-0000-0000-000000000004', 'confirmed')$$,
+  'P0001', null, 'player: set_my_rsvp() refuses a match that has started');
+reset role;
+update matches set starts_at = now() + interval '16 days' where id = '33333333-0000-0000-0000-000000000004';
+
+-- Back to the captain, who sees the decline.
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-0000-0000-000000000a01', true);
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000a01","role":"authenticated"}', true);
+set local role authenticated;
+select is(
+  (select rsvp::text from lineup_slots
+    where match_id = '33333333-0000-0000-0000-000000000004' and player_id = '11111111-0000-0000-0000-000000000003'),
+  'declined', 'captain: sees the player''s decline');
 
 -- CSV import: upsert by lower(email); blank fields keep existing values; role is never set.
 select is(

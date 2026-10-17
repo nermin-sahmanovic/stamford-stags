@@ -770,6 +770,10 @@ export type Database = {
         }[]
       }
       public_team_summary: { Args: never; Returns: Json }
+      save_lineup: {
+        Args: { p_match_id: string; p_publish?: boolean; p_slots: Json }
+        Returns: string[]
+      }
       set_my_availability: {
         Args: {
           p_match_id: string

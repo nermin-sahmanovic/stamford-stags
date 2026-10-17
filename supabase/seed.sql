@@ -12,7 +12,7 @@ insert into public.seasons (id, name, league, division, age_group, ntrp_level, m
                             singles_lines, doubles_lines, max_roster, playoff_min_matches,
                             starts_on, ends_on, is_current)
 values ('22222222-0000-0000-0000-000000000001', 'Fall 2026', 'USTA Adult League', 'Fairfield County',
-        '18+', 3.5, null, 2, 3, 16, 2,
+        '18+', 3.5, null, 1, 3, 16, 2,
         (now() - interval '45 days')::date, (now() + interval '45 days')::date, true);
 
 -------------------------------------------------------------------------------
@@ -43,12 +43,12 @@ insert into public.matches (id, season_id, opponent, starts_at, home_away, locat
                             captain_notes, status, team_points, opponent_points, latitude, longitude, lineup_published_at) values
   ('33333333-0000-0000-0000-000000000001', '22222222-0000-0000-0000-000000000001', 'Greenwich Lobsters',
    date_trunc('day', now()) - interval '20 days' + interval '14 hours', 'away', 'Greenwich Racquet Center', null,
-   null, 'completed', 2, 3, 41.0262, -73.6282, null),
+   null, 'completed', 1, 3, 41.0262, -73.6282, null),
   ('33333333-0000-0000-0000-000000000002', '22222222-0000-0000-0000-000000000001', 'Westport Volleys',
    date_trunc('day', now()) - interval '6 days' + interval '14 hours', 'away', 'Westport Tennis Club', null,
-   null, 'completed', 4, 1, 41.1415, -73.3579, now() - interval '9 days'),
+   null, 'completed', 3, 1, 41.1415, -73.3579, now() - interval '9 days'),
   ('33333333-0000-0000-0000-000000000003', '22222222-0000-0000-0000-000000000001', 'Norwalk Aces',
-   date_trunc('day', now()) + interval '8 days' + interval '14 hours', 'home', 'Stamford Tennis Center', 'Courts 3–7',
+   date_trunc('day', now()) + interval '8 days' + interval '14 hours', 'home', 'Stamford Tennis Center', 'Courts 3–6',
    'Warm-up at 9:30. Courts are booked under the team name. Wear team colors for the photo after.', 'scheduled', null, null, 41.0534, -73.5387, now() - interval '1 day'),
   ('33333333-0000-0000-0000-000000000004', '22222222-0000-0000-0000-000000000001', 'Darien Drop Shots',
    date_trunc('day', now()) + interval '16 days' + interval '17 hours', 'away', 'Darien Indoor Tennis', null,
@@ -63,26 +63,23 @@ insert into public.matches (id, season_id, opponent, starts_at, home_away, locat
 insert into public.lineup_slots (match_id, line_type, line_number, seat, player_id, court_label, rsvp) values
   -- Westport (completed)
   ('33333333-0000-0000-0000-000000000002', 'singles', 1, 1, '11111111-0000-0000-0000-000000000002', 'Ct 1', 'confirmed'),
-  ('33333333-0000-0000-0000-000000000002', 'singles', 2, 1, '11111111-0000-0000-0000-000000000010', 'Ct 2', 'confirmed'),
-  ('33333333-0000-0000-0000-000000000002', 'doubles', 1, 1, '11111111-0000-0000-0000-000000000004', 'Ct 3', 'confirmed'),
-  ('33333333-0000-0000-0000-000000000002', 'doubles', 1, 2, '11111111-0000-0000-0000-000000000005', 'Ct 3', 'confirmed'),
-  ('33333333-0000-0000-0000-000000000002', 'doubles', 2, 1, '11111111-0000-0000-0000-000000000001', 'Ct 4', 'confirmed'),
-  ('33333333-0000-0000-0000-000000000002', 'doubles', 2, 2, '11111111-0000-0000-0000-000000000012', 'Ct 4', 'confirmed'),
-  ('33333333-0000-0000-0000-000000000002', 'doubles', 3, 1, '11111111-0000-0000-0000-000000000011', 'Ct 5', 'confirmed'),
-  ('33333333-0000-0000-0000-000000000002', 'doubles', 3, 2, '11111111-0000-0000-0000-000000000013', 'Ct 5', 'confirmed'),
-  -- Norwalk (upcoming), matches the prototype
-  ('33333333-0000-0000-0000-000000000003', 'singles', 1, 1, '11111111-0000-0000-0000-000000000002', 'Ct 3', 'confirmed'),
-  ('33333333-0000-0000-0000-000000000003', 'singles', 2, 1, '11111111-0000-0000-0000-000000000003', 'Ct 4', 'confirmed'),
-  ('33333333-0000-0000-0000-000000000003', 'doubles', 1, 1, '11111111-0000-0000-0000-000000000004', 'Ct 5', 'confirmed'),
-  ('33333333-0000-0000-0000-000000000003', 'doubles', 1, 2, '11111111-0000-0000-0000-000000000005', 'Ct 5', 'confirmed'),
-  ('33333333-0000-0000-0000-000000000003', 'doubles', 2, 1, '11111111-0000-0000-0000-000000000006', 'Ct 6', 'confirmed'),
-  ('33333333-0000-0000-0000-000000000003', 'doubles', 2, 2, '11111111-0000-0000-0000-000000000007', 'Ct 6', 'confirmed'),
-  ('33333333-0000-0000-0000-000000000003', 'doubles', 3, 1, '11111111-0000-0000-0000-000000000008', 'Ct 7', 'confirmed'),
-  ('33333333-0000-0000-0000-000000000003', 'doubles', 3, 2, '11111111-0000-0000-0000-000000000009', 'Ct 7', 'pending');
+  ('33333333-0000-0000-0000-000000000002', 'doubles', 1, 1, '11111111-0000-0000-0000-000000000004', 'Ct 2', 'confirmed'),
+  ('33333333-0000-0000-0000-000000000002', 'doubles', 1, 2, '11111111-0000-0000-0000-000000000005', 'Ct 2', 'confirmed'),
+  ('33333333-0000-0000-0000-000000000002', 'doubles', 2, 1, '11111111-0000-0000-0000-000000000001', 'Ct 3', 'confirmed'),
+  ('33333333-0000-0000-0000-000000000002', 'doubles', 2, 2, '11111111-0000-0000-0000-000000000012', 'Ct 3', 'confirmed'),
+  ('33333333-0000-0000-0000-000000000002', 'doubles', 3, 1, '11111111-0000-0000-0000-000000000011', 'Ct 4', 'confirmed'),
+  ('33333333-0000-0000-0000-000000000002', 'doubles', 3, 2, '11111111-0000-0000-0000-000000000013', 'Ct 4', 'confirmed'),
+  -- Norwalk (upcoming): 1 singles + 3 doubles, one player still pending
+  ('33333333-0000-0000-0000-000000000003', 'singles', 1, 1, '11111111-0000-0000-0000-000000000003', 'Ct 3', 'confirmed'),
+  ('33333333-0000-0000-0000-000000000003', 'doubles', 1, 1, '11111111-0000-0000-0000-000000000004', 'Ct 4', 'confirmed'),
+  ('33333333-0000-0000-0000-000000000003', 'doubles', 1, 2, '11111111-0000-0000-0000-000000000005', 'Ct 4', 'confirmed'),
+  ('33333333-0000-0000-0000-000000000003', 'doubles', 2, 1, '11111111-0000-0000-0000-000000000006', 'Ct 5', 'confirmed'),
+  ('33333333-0000-0000-0000-000000000003', 'doubles', 2, 2, '11111111-0000-0000-0000-000000000007', 'Ct 5', 'confirmed'),
+  ('33333333-0000-0000-0000-000000000003', 'doubles', 3, 1, '11111111-0000-0000-0000-000000000008', 'Ct 6', 'confirmed'),
+  ('33333333-0000-0000-0000-000000000003', 'doubles', 3, 2, '11111111-0000-0000-0000-000000000009', 'Ct 6', 'pending');
 
 insert into public.line_results (match_id, line_type, line_number, won, score) values
   ('33333333-0000-0000-0000-000000000002', 'singles', 1, true,  '6-3 6-4'),
-  ('33333333-0000-0000-0000-000000000002', 'singles', 2, true,  '7-5 6-2'),
   ('33333333-0000-0000-0000-000000000002', 'doubles', 1, true,  '6-2 6-1'),
   ('33333333-0000-0000-0000-000000000002', 'doubles', 2, true,  '4-6 6-3 10-6'),
   ('33333333-0000-0000-0000-000000000002', 'doubles', 3, false, '3-6 5-7');
@@ -122,7 +119,7 @@ insert into public.availability (match_id, player_id, status) values
 -------------------------------------------------------------------------------
 insert into public.checklist_items (match_id, label, done, sort) values
   ('33333333-0000-0000-0000-000000000003', 'Lineup posted and confirmed', true,  1),
-  ('33333333-0000-0000-0000-000000000003', 'Courts 3–7 reserved',          true,  2),
+  ('33333333-0000-0000-0000-000000000003', 'Courts 3–6 reserved',          true,  2),
   ('33333333-0000-0000-0000-000000000003', 'New balls for each court',     false, 3),
   ('33333333-0000-0000-0000-000000000003', 'Scorecards printed',           false, 4),
   ('33333333-0000-0000-0000-000000000003', 'Water and towels',             false, 5),
@@ -166,7 +163,7 @@ insert into public.messages (id, sent_by, audience, match_id, subject, body, rec
   ('44444444-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000001', 'team', null,
    'Great win at Westport', 'Nice work everyone.', 14, 'seed', now() - interval '5 days'),
   ('44444444-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000001', 'match', '33333333-0000-0000-0000-000000000003',
-   'Norwalk lineup posted', 'Lineup and courts are in Match Center. Please confirm.', 8, 'seed', now() - interval '2 days');
+   'Norwalk lineup posted', 'Lineup and courts are in Match Center. Please confirm.', 7, 'seed', now() - interval '2 days');
 
 insert into public.message_recipients (message_id, player_id, email)
 select '44444444-0000-0000-0000-000000000001', id, email from public.players where is_active;

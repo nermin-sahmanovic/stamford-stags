@@ -93,6 +93,8 @@ async function EditMatch({ params }: { params: Promise<{ id: string }> }) {
               matchId={match.id}
               published={match.lineupPublished}
               slotCount={lineup.reduce((n, line) => n + line.players.length, 0)}
+              declined={lineup.reduce((n, line) => n + line.players.filter((p) => p.rsvp === "declined").length, 0)}
+              editable={match.status === "scheduled"}
             />
           </Section>
         </div>

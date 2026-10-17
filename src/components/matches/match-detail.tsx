@@ -8,22 +8,30 @@ import { directionsUrl, opponentLabel, resultLabel } from "@/lib/matches/display
 import { lineLabel, type LineupLine, type MatchDetailData } from "@/lib/matches/queries";
 import { Checklist } from "./checklist";
 import { MatchForecast, MatchForecastFallback } from "./match-forecast";
+import { MyRsvp } from "./my-rsvp";
 
 const sectionHeading = "font-display text-[24px] leading-tight font-bold tracking-[0.03em] uppercase";
 
 /** Full match view: hero, notes, result, lineup and checklist (design-reference/MatchCenter). */
 export function MatchDetail({
   data,
+  meId,
   isCaptain,
   eyebrow,
 }: {
   data: MatchDetailData;
+  /** The signed-in player, to show their spot and Confirm / Decline. */
+  meId: string;
   isCaptain: boolean;
   eyebrow?: string;
 }) {
   const { match, lineup, checklist, results } = data;
   const directions = directionsUrl(match.locationName, match.locationAddress);
   const showLineup = match.lineupPublished || isCaptain;
+  const myLine = match.lineupPublished ? lineup.find((l) => l.players.some((p) => p.id === meId)) : undefined;
+  const me = myLine?.players.find((p) => p.id === meId);
+  const canRsvp = myLine && me && match.status === "scheduled" && !data.hasStarted;
+  const canEditLineup = isCaptain && match.status === "scheduled";
 
   return (
     <div className="md:grid md:grid-cols-2 md:items-start md:gap-6">
@@ -104,9 +112,26 @@ export function MatchDetail({
             {isCaptain && !match.lineupPublished && lineup.length > 0 ? (
               <Pill tone="warn">Draft · not published</Pill>
             ) : null}
+            {canEditLineup ? (
+              <Link
+                href={`/captain/matches/${match.id}/lineup`}
+                className="ml-auto flex min-h-11 items-center text-[14px] font-semibold text-court"
+              >
+                {lineup.length > 0 ? "Edit lineup" : "Build lineup"}
+              </Link>
+            ) : null}
           </div>
+          {canRsvp ? (
+            <MyRsvp
+              matchId={match.id}
+              line={myLine.label}
+              partner={myLine.players.find((p) => p.id !== meId)?.name ?? null}
+              court={myLine.court}
+              rsvp={me.rsvp}
+            />
+          ) : null}
           {showLineup && lineup.length > 0 ? (
-            <Lineup lineup={lineup} results={match.status === "completed" ? results : []} />
+            <Lineup lineup={lineup} meId={meId} results={match.status === "completed" ? results : []} />
           ) : (
             <p className="rounded-2xl border border-line bg-white p-4 text-[15px] text-slate-600">
               Lineup not posted yet.
@@ -177,14 +202,25 @@ function lineStatus(line: LineupLine) {
   if (line.players.every((p) => p.rsvp === "confirmed")) {
     return { text: line.players.length > 1 ? "Both confirmed" : "Confirmed", tone: "text-blue-700" };
   }
-  const open = line.players.filter((p) => p.rsvp !== "confirmed");
+  // Declines first: they're what the captain has to act on.
+  const open = line.players
+    .filter((p) => p.rsvp !== "confirmed")
+    .sort((a, b) => Number(b.rsvp === "declined") - Number(a.rsvp === "declined"));
   return {
     text: open.map((p) => (line.players.length > 1 ? `${p.name} ${p.rsvp}` : rsvpText[p.rsvp])).join(" · "),
     tone: "text-warn",
   };
 }
 
-function Lineup({ lineup, results }: { lineup: LineupLine[]; results: MatchDetailData["results"] }) {
+function Lineup({
+  lineup,
+  meId,
+  results,
+}: {
+  lineup: LineupLine[];
+  meId: string;
+  results: MatchDetailData["results"];
+}) {
   const all = lineup.flatMap((l) => l.players);
   const counts = {
     confirmed: all.filter((p) => p.rsvp === "confirmed").length,
@@ -200,7 +236,7 @@ function Lineup({ lineup, results }: { lineup: LineupLine[]; results: MatchDetai
           [
             ["Confirmed", counts.confirmed, "text-blue-700"],
             ["Pending", counts.pending, "text-warn"],
-            ["Declined", counts.declined, "text-navy"],
+            ["Declined", counts.declined, counts.declined > 0 ? "text-warn" : "text-navy"],
           ] as const
         ).map(([label, value, tone]) => (
           <div key={label} className="rounded-[12px] border border-line bg-white px-2.5 py-2">
@@ -213,12 +249,17 @@ function Lineup({ lineup, results }: { lineup: LineupLine[]; results: MatchDetai
         {lineup.map((line) => {
           const status = lineStatus(line);
           const result = resultFor.get(line.key);
+          const mine = line.players.some((p) => p.id === meId);
           return (
-            <li key={line.key} className="flex items-center gap-3 px-3.5 py-3">
+            <li
+              key={line.key}
+              className={`flex items-center gap-3 px-3.5 py-3 first:rounded-t-2xl last:rounded-b-2xl ${mine ? "bg-blue-50" : ""}`}
+            >
               <LineChip lineType={line.lineType} label={line.label} />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[15px] font-semibold">
                   {line.players.map((p) => p.name).join(" & ")}
+                  {mine ? <span className="sr-only"> (your line)</span> : null}
                 </div>
                 {result ? (
                   <div className={`text-[12px] font-semibold ${result.won ? "text-blue-700" : "text-warn"}`}>

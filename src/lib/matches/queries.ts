@@ -234,21 +234,31 @@ export async function getAvailabilityBoard(meId: string) {
   return { matches, mine, team };
 }
 
-export type CaptainMatchRow = Match & { replied: number | null; roster: number | null; available: number | null };
+export type CaptainMatchRow = Match & {
+  replied: number | null;
+  roster: number | null;
+  available: number | null;
+  declined: number;
+};
 
-/** Captain list: every match this season with reply counts. */
+/** Captain list: every match this season with reply counts and lineup declines. */
 export async function getCaptainMatches() {
   const supabase = await readClient();
-  const [matches, summary] = await Promise.all([
+  const [matches, summary, declined] = await Promise.all([
     supabase
       .from("matches")
       .select(`${MATCH_COLUMNS}, season:seasons!inner(is_current)`)
       .eq("season.is_current", true)
       .order("starts_at"),
     supabase.from("match_availability_summary").select("match_id, available, no_response, roster_size"),
+    supabase.from("lineup_slots").select("match_id").eq("rsvp", "declined"),
   ]);
   if (matches.error) throw matches.error;
   if (summary.error) throw summary.error;
+  if (declined.error) throw declined.error;
+
+  const declinedFor = new Map<string, number>();
+  for (const d of declined.data) declinedFor.set(d.match_id, (declinedFor.get(d.match_id) ?? 0) + 1);
 
   const summaryFor = new Map(summary.data.map((s) => [s.match_id, s]));
   const now = Date.now();
@@ -259,6 +269,7 @@ export async function getCaptainMatches() {
       available: s?.available ?? null,
       roster: s?.roster_size ?? null,
       replied: s?.roster_size != null && s.no_response != null ? s.roster_size - s.no_response : null,
+      declined: declinedFor.get(row.id) ?? 0,
     };
   });
   return {
@@ -266,3 +277,92 @@ export async function getCaptainMatches() {
     past: rows.filter((m) => !isUpcoming(m, now)).reverse(),
   };
 }
+
+export type PositionPref = Enums["position_pref"];
+
+export type LineupCandidate = {
+  id: string;
+  name: string;
+  rating: number | null;
+  pref: PositionPref | null;
+  availability: AvailabilityStatus | null;
+  /** Why the player isn't eligible under the season's rating rules, or null if they are. */
+  ineligible: string | null;
+};
+
+export type BuilderSeat = { lineType: LineType; lineNumber: number; seat: 1 | 2 };
+export type BuilderLine = {
+  key: string;
+  lineType: LineType;
+  lineNumber: number;
+  court: string | null;
+  seats: (BuilderSeat & { playerId: string | null; rsvp: RsvpStatus | null })[];
+};
+
+/** Captain lineup builder: the season's lines with current seats, and everyone who could play. */
+export async function getLineupBuilder(id: string) {
+  if (!z.guid().safeParse(id).success) return null;
+  const supabase = await readClient();
+  const [match, slots, eligible, players] = await Promise.all([
+    supabase
+      .from("matches")
+      .select(`${MATCH_COLUMNS}, season:seasons!inner(singles_lines, doubles_lines, ntrp_level, min_ntrp)`)
+      .eq("id", id)
+      .maybeSingle(),
+    supabase.from("lineup_slots").select("line_type, line_number, seat, player_id, court_label, rsvp").eq("match_id", id),
+    supabase.rpc("eligible_players", { p_match_id: id }),
+    supabase.from("players").select("id, position_pref").eq("is_active", true),
+  ]);
+  if (match.error) throw match.error;
+  if (slots.error) throw slots.error;
+  if (eligible.error) throw eligible.error;
+  if (players.error) throw players.error;
+  if (!match.data) return null;
+
+  const { singles_lines, doubles_lines, ntrp_level, min_ntrp } = match.data.season;
+  const slotAt = new Map(slots.data.map((s) => [`${lineLabel(s.line_type, s.line_number)}-${s.seat}`, s]));
+
+  const lines: BuilderLine[] = [];
+  const addLine = (lineType: LineType, lineNumber: number) => {
+    const key = lineLabel(lineType, lineNumber);
+    const seats = (lineType === "singles" ? [1] : [1, 2]).map((seat) => {
+      const slot = slotAt.get(`${key}-${seat}`);
+      return { lineType, lineNumber, seat: seat as 1 | 2, playerId: slot?.player_id ?? null, rsvp: slot?.rsvp ?? null };
+    });
+    const court = seats.map((s) => slotAt.get(`${key}-${s.seat}`)?.court_label).find((c) => c) ?? null;
+    lines.push({ key, lineType, lineNumber, court, seats });
+  };
+  for (let n = 1; n <= singles_lines; n++) addLine("singles", n);
+  for (let n = 1; n <= doubles_lines; n++) addLine("doubles", n);
+
+  const prefFor = new Map(players.data.map((p) => [p.id, p.position_pref]));
+  // The generated types say non-null, but SQL returns null for no answer / no rating.
+  const candidates: LineupCandidate[] = eligible.data.map((p) => {
+    const rating = (p.ntrp_rating as number | null) ?? null;
+    const availability = (p.availability as AvailabilityStatus | null) ?? null;
+    let ineligible: string | null = null;
+    if (rating === null) ineligible = "No NTRP rating on file";
+    else if (!p.rating_ok && rating > ntrp_level) {
+      ineligible = `Rated ${rating.toFixed(1)}, above the ${ntrp_level.toFixed(1)} level`;
+    } else if (!p.rating_ok && min_ntrp !== null) {
+      ineligible = `Rated ${rating.toFixed(1)}, below the ${min_ntrp.toFixed(1)} minimum`;
+    }
+    return {
+      id: p.player_id,
+      name: shortName(p.full_name),
+      rating,
+      pref: prefFor.get(p.player_id) ?? null,
+      availability,
+      ineligible,
+    };
+  });
+
+  return {
+    match: toMatch(match.data),
+    hasStarted: Date.parse(match.data.starts_at) <= Date.now(),
+    lines,
+    candidates,
+  };
+}
+
+export type LineupBuilderData = NonNullable<Awaited<ReturnType<typeof getLineupBuilder>>>;

@@ -9,7 +9,7 @@ export const league = {
   title: "The league",
   points: [
     "We play in the USTA Adult League, organized by NTRP level.", // TODO captain: confirm age group and level
-    "Each match has 2 singles and 3 doubles lines.", // Matches the current season setup; TODO captain: confirm
+    "Each match has 1 singles and 3 doubles lines.", // League format, confirmed by the captain
     "Your NTRP rating must be at or below the team's level to play.", // TODO captain: confirm eligibility rules
     "Scores and standings are entered by the captain; the USTA site is the official record.",
   ],

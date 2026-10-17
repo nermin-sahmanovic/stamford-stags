@@ -4,8 +4,8 @@ import { formatDayOfMonth, formatMonthShort, formatTime } from "@/lib/format";
 import { homeAwayLabel, opponentLabel, resultLabel } from "@/lib/matches/display";
 import type { Match } from "@/lib/matches/queries";
 
-/** A match in a list: date block, opponent, meta line and a badge. Links to the detail page. */
-export function MatchRow({ match, href, meta }: { match: Match; href: string; meta?: string }) {
+/** A match in a list: date block, opponent, meta line and a badge (or a warn `alert`). Links to the detail page. */
+export function MatchRow({ match, href, meta, alert }: { match: Match; href: string; meta?: string; alert?: string }) {
   const result = match.status === "completed" ? resultLabel(match.teamPoints, match.opponentPoints) : null;
   const defaultMeta = [
     homeAwayLabel(match.homeAway),
@@ -32,6 +32,8 @@ export function MatchRow({ match, href, meta }: { match: Match; href: string; me
       </div>
       {match.status === "cancelled" ? (
         <Pill tone="warn">Cancelled</Pill>
+      ) : alert ? (
+        <Pill tone="warn">{alert}</Pill>
       ) : result ? (
         <span
           className={`shrink-0 rounded-md px-2 py-1 font-display text-[18px] leading-none font-bold ${

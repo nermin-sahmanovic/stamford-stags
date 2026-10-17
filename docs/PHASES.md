@@ -153,7 +153,7 @@ From design-reference/MatchCenter.dc.html and Availability.dc.html:
 Read CLAUDE.md. We're on Phase 6.
 
 Captain lineup builder for a match:
-- Lines come from the season config (default S1, S2, D1–D3).
+- Lines come from the season config (1 singles + 3 doubles: S1, D1–D3).
 - The player picker uses eligible_players(match_id). Available players sort first;
   flag ineligible and unavailable players with the reason; block double-booking.
 - Assign courts per line.
