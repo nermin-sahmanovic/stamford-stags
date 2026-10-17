@@ -152,17 +152,17 @@ insert into public.registrations (full_name, email, phone, usta_number, ntrp_rat
 -- News
 -------------------------------------------------------------------------------
 insert into public.news_posts (type, title, body, is_public, published_at, author_id) values
-  ('result', 'Stags win 4–1 at Westport', 'Clean sweep on the doubles courts.', true, now() - interval '6 days', '11111111-0000-0000-0000-000000000001'),
+  ('result', 'Stags win 3–1 at Westport', 'Won the singles and two of the three doubles lines.', true, now() - interval '6 days', '11111111-0000-0000-0000-000000000001'),
   ('announcement', 'Lineup for the Norwalk match is posted', 'Check your court and confirm in Match Center.', false, now() - interval '2 days', '11111111-0000-0000-0000-000000000001'),
   ('event', 'End-of-season social', 'Location to be announced.', true, now() - interval '1 day', '11111111-0000-0000-0000-000000000001');
 
 -------------------------------------------------------------------------------
 -- Message history
 -------------------------------------------------------------------------------
-insert into public.messages (id, sent_by, audience, match_id, subject, body, recipient_count, provider, sent_at) values
-  ('44444444-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000001', 'team', null,
+insert into public.messages (id, sent_by, audience, kind, match_id, subject, body, recipient_count, provider, sent_at) values
+  ('44444444-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000001', 'team', 'message', null,
    'Great win at Westport', 'Nice work everyone.', 14, 'seed', now() - interval '5 days'),
-  ('44444444-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000001', 'match', '33333333-0000-0000-0000-000000000003',
+  ('44444444-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000001', 'match', 'lineup', '33333333-0000-0000-0000-000000000003',
    'Norwalk lineup posted', 'Lineup and courts are in Match Center. Please confirm.', 7, 'seed', now() - interval '2 days');
 
 insert into public.message_recipients (message_id, player_id, email)

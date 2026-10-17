@@ -120,16 +120,21 @@ export function LineupBuilder({
           return;
         }
         const people = (n: number) => `${n} player${n === 1 ? "" : "s"}`;
-        setMessage({
-          tone: "ok",
-          text: !publish
-            ? "Draft saved. Only captains can see it."
-            : !published
-              ? `Published. ${people(result.notified)} notified.`
-              : result.notified > 0
-                ? `Saved. ${people(result.notified)} asked to confirm.`
-                : "Saved. No one needs to re-confirm.",
-        });
+        const saved = !publish
+          ? "Draft saved. Only captains can see it."
+          : !published
+            ? "Published."
+            : result.asked > 0
+              ? `Saved. ${people(result.asked)} asked to confirm.`
+              : "Saved. No one needs to re-confirm.";
+        const emails = (n: number) => `${n} email${n === 1 ? "" : "s"}`;
+        setMessage(
+          result.emailFailed > 0
+            ? { tone: "error", text: `${saved} ${emails(result.emailFailed)} failed. Check Messages.` }
+            : result.emailLogged > 0
+              ? { tone: "error", text: `${saved} ${emails(result.emailLogged)} logged only, not sent: email isn't set up.` }
+              : { tone: "ok", text: result.emailed > 0 ? `${saved} ${people(result.emailed)} emailed.` : saved },
+        );
       } catch {
         setMessage({ tone: "error", text: "Couldn't save. Check your connection and try again." });
       }

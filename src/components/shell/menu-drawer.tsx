@@ -16,6 +16,8 @@ import {
 type Props = {
   showCaptain?: boolean;
   signedIn?: boolean;
+  /** Who is signed in (null when signed out). name is null if they aren't on the roster. */
+  account?: { name: string | null; email: string | null; roleLabel: string | null } | null;
 };
 
 const buttonClass =
@@ -33,7 +35,7 @@ export function MenuButtonPlaceholder() {
   );
 }
 
-export function MenuDrawer({ showCaptain = false, signedIn = false }: Props) {
+export function MenuDrawer({ showCaptain = false, signedIn = false, account = null }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -124,6 +126,15 @@ export function MenuDrawer({ showCaptain = false, signedIn = false }: Props) {
             <CloseIcon size={22} />
           </button>
         </div>
+        {account ? (
+          <div className="mx-4 mb-2 flex-none rounded-[12px] bg-navy-2 px-3 py-2.5">
+            <div className="text-[11px] font-bold tracking-[0.08em] text-ball uppercase">Signed in as</div>
+            <div className="truncate text-[16px] font-semibold text-white">{account.name ?? account.email ?? "Unknown"}</div>
+            <div className="truncate text-[13px] text-muted">
+              {account.name ? [account.roleLabel, account.email].filter(Boolean).join(" · ") : "Not on the roster"}
+            </div>
+          </div>
+        ) : null}
         <nav aria-label="Site" className="min-h-0 flex-1 overflow-y-auto px-2">
           <ul className="flex flex-col gap-0.5">
             {renderLinks(visibleItems(primaryNav, showCaptain))}

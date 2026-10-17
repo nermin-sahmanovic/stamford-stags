@@ -366,3 +366,17 @@ export async function getLineupBuilder(id: string) {
 }
 
 export type LineupBuilderData = NonNullable<Awaited<ReturnType<typeof getLineupBuilder>>>;
+
+/** Active players with no availability answer for a match (captain reminders). */
+export async function getNonResponders(matchId: string) {
+  if (!z.guid().safeParse(matchId).success) return [];
+  const supabase = await readClient();
+  const [players, answers] = await Promise.all([
+    supabase.from("players").select("id, full_name").eq("is_active", true).order("full_name"),
+    supabase.from("availability").select("player_id").eq("match_id", matchId),
+  ]);
+  if (players.error) throw players.error;
+  if (answers.error) throw answers.error;
+  const answered = new Set(answers.data.map((a) => a.player_id));
+  return players.data.filter((p) => !answered.has(p.id)).map((p) => ({ id: p.id, name: shortName(p.full_name) }));
+}

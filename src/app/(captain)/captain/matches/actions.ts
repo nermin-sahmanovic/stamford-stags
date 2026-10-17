@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireCaptain } from "@/lib/auth";
 import { echoValues, firstFieldErrors, type FormState } from "@/lib/form-state";
+import { sendAvailabilityReminder } from "@/lib/email/messages";
 import { notifyLineupPublished } from "@/lib/email/notify";
 import { geocodeAddress } from "@/lib/matches/geocode";
 import {
@@ -167,14 +168,17 @@ export async function unpublishLineup(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
-export type SaveLineupResult = { ok: true; notified: number } | { ok: false; message: string };
+/** asked = players who now need to (re)confirm; email counts say what actually happened to their emails. */
+export type SaveLineupResult =
+  | { ok: true; asked: number; emailed: number; emailLogged: number; emailFailed: number }
+  | { ok: false; message: string };
 
 /**
  * The lineup builder's single save. save_lineup() replaces the match's slots in one transaction
  * and returns who to notify: everyone on first publish, only players new to a line after that.
  */
 export async function saveLineup(matchId: string, input: LineupInput): Promise<SaveLineupResult> {
-  await requireCaptain();
+  const me = await requireCaptain();
   if (!isId(matchId)) return fail(NOT_FOUND);
   const parsed = lineupInputSchema.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check the lineup.");
@@ -205,15 +209,53 @@ export async function saveLineup(matchId: string, input: LineupInput): Promise<S
     return fail("lineup save failed", error);
   }
 
+  // The lineup is saved either way; email trouble shows up in the result and on the Messages page.
+  let emailed = 0;
+  let emailLogged = 0;
+  let emailFailed = 0;
   if (notify.length > 0) {
-    await notifyLineupPublished({
-      matchId,
-      playerIds: notify,
-      kind: before.lineup_published_at ? "updated" : "published",
-    });
+    try {
+      const result = await notifyLineupPublished({
+        matchId,
+        playerIds: notify,
+        kind: before.lineup_published_at ? "updated" : "published",
+        senderId: me.id,
+        replyTo: me.email,
+      });
+      emailed = result?.sent ?? 0;
+      emailLogged = result?.logged ?? 0;
+      emailFailed = result?.failed ?? 0;
+    } catch (err) {
+      console.error("[matches] lineup email failed:", err instanceof Error ? err.message : err);
+      emailFailed = notify.length;
+    }
   }
   matchesChanged();
-  return { ok: true, notified: notify.length };
+  revalidatePath("/captain/messages", "layout");
+  return { ok: true, asked: notify.length, emailed, emailLogged, emailFailed };
+}
+
+export type ReminderResult = { ok: true; sent: number; logged: number; failed: number } | { ok: false; message: string };
+
+/** "Remind non-responders": one email per player who hasn't answered, with one-tap answers. */
+export async function remindNonResponders(matchId: string): Promise<ReminderResult> {
+  const me = await requireCaptain();
+  if (!isId(matchId)) return fail(NOT_FOUND);
+  try {
+    const result = await sendAvailabilityReminder({
+      matchId,
+      senderId: me.id,
+      senderName: me.fullName,
+      replyTo: me.email,
+      automated: false,
+    });
+    if (!result) return fail("Everyone has answered, or this match is closed.");
+    revalidatePath("/captain/messages", "layout");
+    return { ok: true, sent: result.sent, logged: result.logged, failed: result.failed };
+  } catch (err) {
+    console.error("[matches] reminder failed:", err instanceof Error ? err.message : err);
+    return fail(SOMETHING_WRONG);
+  }
 }
 
 // --- Checklist -------------------------------------------------------------

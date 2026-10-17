@@ -345,18 +345,27 @@ export type Database = {
       message_recipients: {
         Row: {
           email: string
+          error: string | null
           message_id: string
           player_id: string | null
+          provider_message_id: string | null
+          status: string
         }
         Insert: {
           email: string
+          error?: string | null
           message_id: string
           player_id?: string | null
+          provider_message_id?: string | null
+          status?: string
         }
         Update: {
           email?: string
+          error?: string | null
           message_id?: string
           player_id?: string | null
+          provider_message_id?: string | null
+          status?: string
         }
         Relationships: [
           {
@@ -378,9 +387,12 @@ export type Database = {
       messages: {
         Row: {
           audience: Database["public"]["Enums"]["message_audience"]
+          automated: boolean
           body: string
+          delivery: string | null
           error: string | null
           id: string
+          kind: string
           match_id: string | null
           provider: string | null
           recipient_count: number
@@ -391,9 +403,12 @@ export type Database = {
         }
         Insert: {
           audience: Database["public"]["Enums"]["message_audience"]
+          automated?: boolean
           body: string
+          delivery?: string | null
           error?: string | null
           id?: string
+          kind?: string
           match_id?: string | null
           provider?: string | null
           recipient_count?: number
@@ -404,9 +419,12 @@ export type Database = {
         }
         Update: {
           audience?: Database["public"]["Enums"]["message_audience"]
+          automated?: boolean
           body?: string
+          delivery?: string | null
           error?: string | null
           id?: string
+          kind?: string
           match_id?: string | null
           provider?: string | null
           recipient_count?: number
@@ -602,6 +620,7 @@ export type Database = {
       }
       rsvp_tokens: {
         Row: {
+          created_at: string
           expires_at: string
           match_id: string
           player_id: string
@@ -609,6 +628,7 @@ export type Database = {
           used_at: string | null
         }
         Insert: {
+          created_at?: string
           expires_at?: string
           match_id: string
           player_id: string
@@ -616,6 +636,7 @@ export type Database = {
           used_at?: string | null
         }
         Update: {
+          created_at?: string
           expires_at?: string
           match_id?: string
           player_id?: string
@@ -736,6 +757,10 @@ export type Database = {
       }
     }
     Functions: {
+      apply_rsvp_token: {
+        Args: { p_answer: string; p_token: string }
+        Returns: Json
+      }
       current_player_id: { Args: never; Returns: string }
       eligible_players: {
         Args: { p_match_id: string }
@@ -758,6 +783,14 @@ export type Database = {
       }
       is_captain: { Args: never; Returns: boolean }
       is_member: { Args: never; Returns: boolean }
+      issue_rsvp_tokens: {
+        Args: { p_match_id: string; p_player_ids: string[] }
+        Returns: {
+          player_id: string
+          token: string
+        }[]
+      }
+      peek_rsvp_token: { Args: { p_token: string }; Returns: Json }
       public_schedule: {
         Args: { p_from?: string }
         Returns: {

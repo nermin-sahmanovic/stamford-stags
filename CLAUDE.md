@@ -14,7 +14,8 @@ is the primary design target.
   change between majors (for example, Next 16 renamed `middleware.ts` to `proxy.ts`).
 - Tailwind CSS v4 (CSS-first config). Design tokens live in `src/app/globals.css` under `@theme`.
 - Supabase: Postgres, Auth (email magic link), Storage. Use `@supabase/ssr` for clients.
-- Email: Microsoft Graph `sendMail` from a team mailbox (see Decisions). Keep all of it in `src/lib/email/`.
+- Email: Resend (REST batch API, one email per player; see Decisions and `docs/EMAIL_SETUP.md`). Keep all of it in `src/lib/email/`.
+  **Unless `EMAIL_MODE=live`, every email is redirected to `EMAIL_DEV_REDIRECT`** (or only logged without a key).
 - Hosting: Vercel, with Supabase cloud.
 - Validation: zod on every server action and route handler input.
 
@@ -76,7 +77,9 @@ src/components/        UI primitives and screen sections
 src/lib/supabase/      server.ts, client.ts, admin.ts (service role, server only)
 src/lib/auth.ts        requireMember(), requireCaptain(), getCurrentPlayer()
 src/lib/roster/        Roster zod schemas (shared by CSV preview and actions), CSV columns, roster queries
-src/lib/email/         send.ts (Graph), templates
+src/lib/email/         config.ts (env), send.ts (Resend + dev redirect), templates.ts, messages.ts (deliver + log), notify.ts (lineup)
+src/lib/messages/      Compose schema and message history reads
+src/app/(public)/r/    One-tap RSVP landing page (/r/[token]?s=...): GET only reads; a server action applies the answer
 supabase/migrations/   SQL migrations (never edit an applied migration; add a new one)
 supabase/tests/        pgTAP tests (rls.sql). Run with `npm run test:rls` (scripts/test-rls.mjs)
 design-reference/      Prototype screens (*.dc.html). Read them for layout, spacing and copy.
@@ -116,15 +119,22 @@ Match `design-reference/`. Those files are the approved look.
 - `availability` has one row per (match, player): available / maybe / unavailable.
 - `events` covers practices, socials, USTA deadlines and registration windows. Matches are not duplicated here.
 - `registrations` stores public Join-form submissions. Anonymous users can insert, and only captains can read.
-- `messages` + `message_recipients` hold the email history. They are written server-side only.
+- `messages` + `message_recipients` hold the email history. They are written server-side only (service role).
+  `messages.kind` is message / reminder / lineup, `automated` marks cron sends (one automatic reminder per match),
+  `delivery` is live / redirect / log, and `status` is queued / sent / logged / partial / failed. "logged" means log mode
+  (no `RESEND_API_KEY` or `EMAIL_DEV_REDIRECT`): never sent, shown as "Logged (not sent)". Each recipient row has its own
+  `status` (queued / sent / logged / failed), `error` and `provider_message_id`.
 - `news_posts` holds announcements and results. `is_public` controls whether the home page shows them.
-- `rsvp_tokens` backs the one-tap RSVP links in emails. It is service role only, with no RLS policies.
+- `rsvp_tokens` backs the one-tap RSVP links in emails. It is service role only, with no RLS policies. One token per
+  (player, match), a random uuid, expiring when the match starts; reusable until then so a player can change their answer.
 - Helpers:
   - `is_member()`, `is_captain()` and `current_player_id()`.
   - RPCs: `set_my_availability`, `set_my_rsvp` (published lineup, match not started), `update_my_profile`, `eligible_players(match_id)`, `public_team_summary()`, `public_schedule()` and
     `import_players(rows)` (captain CSV upsert by `lower(email)`; blank fields keep values; never sets role) and
     `save_lineup(match_id, slots, publish)` (captain builder: replaces slots in one transaction; first publish sets every
     RSVP to pending, later saves reset only players new to a line; returns the player ids to notify).
+  - Service-role-only RPCs: `issue_rsvp_tokens(match_id, player_ids)`, `peek_rsvp_token(token)` and
+    `apply_rsvp_token(token, answer)` (available / maybe / unavailable → availability; confirmed / declined → lineup RSVP).
   - Views: `player_records`, `match_availability_summary` (active players only; includes `roster_size`).
 
 ## Non-negotiables
@@ -144,13 +154,14 @@ Match `design-reference/`. Those files are the approved look.
 |---|---|---|
 | Who sees contact info | Logged-in members only | Public pages never read `players` |
 | Player sign-in | Magic link, plus one-tap RSVP links in emails that work without signing in | Most players will never "log in" |
-| Team email | Microsoft Graph `sendMail` from a team mailbox | App registration with the Mail.Send application permission, scoped to that one mailbox with Exchange RBAC for Applications. Fallback if there's no M365 mailbox: Resend. |
-| Auth emails (magic links) | Custom SMTP in Supabase | Supabase's built-in mailer is heavily rate-limited, so it isn't fit for production |
+| Team email | Resend, one email per player (batch API) | Chosen by the captain in Phase 7. `EMAIL_FROM` on a verified domain; Reply-To is the sending captain. Setup: `docs/EMAIL_SETUP.md`. |
+| Auth emails (magic links) | Custom SMTP in Supabase (Resend SMTP) | Supabase's built-in mailer is heavily rate-limited, so it isn't fit for production |
 | Eligibility | Rating ≤ season NTRP level (and ≥ `min_ntrp` if set). Playoff eligibility = completed matches ≥ `playoff_min_matches` | **TODO captain:** confirm the league's actual rules (age group, any limits on at-level players per lineup) |
 | Lineup format | 1 singles + 3 doubles (7 players), confirmed by the captain | Default for every season (`seasons.singles_lines` / `doubles_lines`); the lineup builder, results form and RLS tests use it |
 | Weather | Open-Meteo (no key), `src/lib/weather.ts` | Forecast only up to 15 days ahead ("Forecast available closer to match day" beyond that). Failures show "Forecast unavailable right now" and are cached for minutes only. Geocoding uses Open-Meteo's geocoder too. |
 | Spam on public forms (Join, Contact) | Honeypot field + Cloudflare Turnstile | Outside production, missing keys fall back to Cloudflare's always-pass test keys (`src/lib/spam.ts`). **Real `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` are required before deploy**: production fails closed and the forms refuse submissions without them. |
-| Contact form recipient | The team mailbox (`GRAPH_SENDER_MAILBOX`) | Public pages never read `players`, so contact messages don't go to a player address. `sendEmail` in `src/lib/email/send.ts` is a logging stub until Phase 7. |
+| Contact form recipient | `TEAM_INBOX` | Public pages never read `players`, so contact messages don't go to a player address. Not stored in `messages`. |
+| Reminders | Captain button any time; daily cron (`vercel.json`, 13:00 UTC) once per match within 5 days | Non-responders = active players with no availability row |
 
 ## How we work
 
@@ -170,7 +181,7 @@ Match `design-reference/`. Those files are the approved look.
 - [x] Phase 4 — Roster and directory (20-row test CSV → 15 created / 3 updated / 2 skipped; export re-imports as all unchanged; 67 pgTAP assertions)
 - [x] Phase 5 — Matches and availability (one-tap availability, live team view and shortages, match create/edit, results updating the record and forecast behavior verified manually; 83 pgTAP assertions + anon REST check pass)
 - [x] Phase 6 — Lineup builder (1 singles + 3 doubles; full lineup under 2 minutes on a phone, ineligible and double-booking flags, publish, and a player decline flagged on the captain view verified manually; 103 pgTAP assertions + anon REST check pass)
-- [ ] Phase 7 — Communications
+- [x] Phase 7 — Communications (Resend with dev redirect; match-participant audience, one-tap RSVP links updating the tracker without login, tampered links refused, reminders to non-responders only and history verified manually; 120 pgTAP assertions + anon REST check pass)
 - [ ] Phase 8 — Schedule, photos and results
 - [ ] Phase 9 — Captain dashboard and polish
-- [ ] Phase 10 — Deploy (before go-live: real Turnstile keys, Graph mailbox, custom SMTP for auth emails)
+- [ ] Phase 10 — Deploy (before go-live: real Turnstile keys, verified Resend domain + `EMAIL_MODE=live` on Production only, `CRON_SECRET`, custom SMTP for auth emails)

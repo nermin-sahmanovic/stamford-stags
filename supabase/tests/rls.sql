@@ -13,7 +13,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(103);
+select plan(120);
 
 -------------------------------------------------------------------------------
 -- Fixtures (as postgres)
@@ -37,6 +37,13 @@ select is(
   'aaaaaaaa-0000-0000-0000-000000000a03'::uuid,
   'link trigger: signing up with a roster email (any case) links the player row');
 
+-- RSVP tokens for New Canaan (match 5): a live one for P06 and an expired one for M. Alvarez (P02).
+insert into public.rsvp_tokens (token, player_id, match_id, expires_at) values
+  ('bbbbbbbb-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000006',
+   '33333333-0000-0000-0000-000000000005', now() + interval '20 days'),
+  ('bbbbbbbb-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000002',
+   '33333333-0000-0000-0000-000000000005', now() - interval '1 minute');
+
 -------------------------------------------------------------------------------
 -- ANON
 -------------------------------------------------------------------------------
@@ -49,6 +56,12 @@ select is((select count(*)::int from availability),  0, 'anon: cannot read avail
 select is((select count(*)::int from matches),       0, 'anon: cannot read matches');
 select is((select count(*)::int from registrations), 0, 'anon: cannot read registrations');
 select is((select count(*)::int from rsvp_tokens),   0, 'anon: cannot read rsvp_tokens');
+select throws_ok(
+  $$select apply_rsvp_token('bbbbbbbb-0000-0000-0000-000000000001', 'available')$$,
+  '42501', null, 'anon: cannot call apply_rsvp_token() (service role only)');
+select throws_ok(
+  $$select peek_rsvp_token('bbbbbbbb-0000-0000-0000-000000000001')$$,
+  '42501', null, 'anon: cannot call peek_rsvp_token() (service role only)');
 select is((select count(*)::int from news_posts where not is_public), 0, 'anon: cannot see member-only news');
 
 select is((public_team_summary() ->> 'player_count')::int, 14, 'anon: public_team_summary() returns player_count');
@@ -224,7 +237,14 @@ select throws_ok(
   'player: cannot import players');
 
 -- Messages and records.
-select is((select count(*)::int from messages), 2, 'player: reads the messages they received');
+select is((select count(*)::int from messages where id::text like '44444444-%'), 2, 'player: reads the seeded messages they received');
+select is(
+  (select count(*)::int from messages m where not exists (
+     select 1 from message_recipients r where r.message_id = m.id and r.player_id = '11111111-0000-0000-0000-000000000003')),
+  0, 'player: sees no message they did not receive');
+select throws_ok(
+  $$select apply_rsvp_token('bbbbbbbb-0000-0000-0000-000000000001', 'available')$$,
+  '42501', null, 'player: cannot call apply_rsvp_token() directly');
 select is(
   (select count(*)::int from message_recipients where player_id <> '11111111-0000-0000-0000-000000000003'),
   0, 'player: reads only their own message_recipients rows');
@@ -246,8 +266,14 @@ select ok(exists (select 1 from registrations where email = 't@rls-test.invalid'
 select lives_ok(
   $$update registrations set status = 'invited' where email = 't@rls-test.invalid'$$,
   'captain: can approve a registration');
-select is((select count(*)::int from messages),    2, 'captain: reads all messages');
+select is((select count(*)::int from messages where id::text like '44444444-%'), 2, 'captain: reads all seeded messages');
 select is((select count(*)::int from rsvp_tokens), 0, 'captain: cannot read rsvp_tokens (service role only)');
+select throws_ok(
+  $$insert into messages (audience, subject, body) values ('team', 'Direct insert', 'Should fail')$$,
+  '42501', null, 'captain: cannot write messages directly (service role only)');
+select throws_ok(
+  $$select * from issue_rsvp_tokens('33333333-0000-0000-0000-000000000005', array['11111111-0000-0000-0000-000000000004'::uuid])$$,
+  '42501', null, 'captain: cannot call issue_rsvp_tokens() (service role only)');
 
 -- Manage matches.
 update matches set captain_notes = 'Updated by captain' where id = '33333333-0000-0000-0000-000000000003';
@@ -484,6 +510,47 @@ select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-0000-0000-000000000a99
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000a99","role":"authenticated"}', true);
 set local role authenticated;
 select is(is_member(), false, 'stranger: loses membership when their roster email changes');
+
+-------------------------------------------------------------------------------
+-- SERVICE ROLE: one-tap RSVP tokens (what the /r/[token] page runs after it has a token)
+-------------------------------------------------------------------------------
+reset role;
+set local role service_role;
+select is(
+  (select token from issue_rsvp_tokens('33333333-0000-0000-0000-000000000005',
+     array['11111111-0000-0000-0000-000000000006'::uuid, '11111111-0000-0000-0000-000000000006'::uuid])),
+  'bbbbbbbb-0000-0000-0000-000000000001'::uuid, 'tokens: issue_rsvp_tokens() reuses the player''s token for the match');
+select is(
+  (select expires_at = (select starts_at from matches where id = '33333333-0000-0000-0000-000000000005')
+     from rsvp_tokens where token = 'bbbbbbbb-0000-0000-0000-000000000001'),
+  true, 'tokens: a token expires when the match starts');
+select is(
+  (peek_rsvp_token('bbbbbbbb-0000-0000-0000-000000000001') ->> 'opponent'),
+  'New Canaan Netters', 'tokens: peek_rsvp_token() describes the match');
+select is(
+  (apply_rsvp_token('bbbbbbbb-0000-0000-0000-000000000001', 'available') ->> 'answer'),
+  'available', 'tokens: apply_rsvp_token() accepts an availability answer');
+select is(
+  (select status::text from availability
+    where match_id = '33333333-0000-0000-0000-000000000005' and player_id = '11111111-0000-0000-0000-000000000006'),
+  'available', 'tokens: the answer is saved as the player''s availability');
+select lives_ok(
+  $$select apply_rsvp_token('bbbbbbbb-0000-0000-0000-000000000001', 'maybe')$$,
+  'tokens: a token can be used again to change the answer');
+select ok((select used_at is not null from rsvp_tokens where token = 'bbbbbbbb-0000-0000-0000-000000000001'),
+  'tokens: using a token records used_at');
+select throws_ok(
+  $$select apply_rsvp_token('bbbbbbbb-0000-0000-0000-000000000002', 'available')$$,
+  'P0002', null, 'tokens: an expired token is refused');
+select throws_ok(
+  $$select apply_rsvp_token('bbbbbbbb-0000-0000-0000-0000000000ff', 'available')$$,
+  'P0002', null, 'tokens: an unknown token is refused');
+select throws_ok(
+  $$select apply_rsvp_token('bbbbbbbb-0000-0000-0000-000000000001', 'confirmed')$$,
+  'P0001', null, 'tokens: Confirm is refused when the player has no published lineup spot');
+select throws_ok(
+  $$select apply_rsvp_token('bbbbbbbb-0000-0000-0000-000000000001', 'whatever')$$,
+  '22023', null, 'tokens: an unknown answer is refused');
 
 -------------------------------------------------------------------------------
 reset role;

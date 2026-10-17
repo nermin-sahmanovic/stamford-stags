@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRightIcon, MatchesIcon, PlayersIcon, UploadIcon } from "@/components/shell/icons";
+import { ArrowRightIcon, MatchesIcon, MessagesIcon, PlayersIcon, UploadIcon } from "@/components/shell/icons";
 
 export const metadata: Metadata = { title: "Captain's Dashboard" };
 
 // The full dashboard comes in Phase 9; until then this links to the captain tools that exist.
 const tools = [
   { href: "/captain/matches", label: "Matches", note: "Create and edit matches, checklists and results", icon: MatchesIcon },
+  { href: "/captain/messages", label: "Messages", note: "Email the team, remind non-responders, see what was sent", icon: MessagesIcon },
   { href: "/captain/roster", label: "Roster", note: "Add, edit, deactivate and bulk edit players", icon: PlayersIcon },
   { href: "/captain/roster/import", label: "Import CSV", note: "Add or update players from a spreadsheet", icon: UploadIcon },
 ];

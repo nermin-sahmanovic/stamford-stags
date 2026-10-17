@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { MenuButtonPlaceholder } from "./menu-drawer";
-import { SessionMenu, SessionTopNav } from "./nav-session";
+import { SessionAccount, SessionMenu, SessionTopNav } from "./nav-session";
 import { TopNavLinks } from "./top-nav";
 
 export function SiteHeader() {
@@ -24,9 +24,12 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <div className="flex h-full items-center gap-2">
+        <div className="flex h-full items-center gap-1 md:gap-2">
           <Suspense fallback={<TopNavLinks />}>
             <SessionTopNav />
+          </Suspense>
+          <Suspense fallback={null}>
+            <SessionAccount />
           </Suspense>
           <Suspense fallback={<MenuButtonPlaceholder />}>
             <SessionMenu />

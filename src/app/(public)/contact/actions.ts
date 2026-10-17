@@ -1,7 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import { sendEmail, teamMailbox } from "@/lib/email/send";
+import { emailMode, teamInbox } from "@/lib/email/config";
+import { sendEmail } from "@/lib/email/send";
+import { contactMessage } from "@/lib/email/templates";
 import { echoValues, firstFieldErrors, type FormState } from "@/lib/form-state";
 import { isHoneypotFilled, verifyTurnstile } from "@/lib/spam";
 import { CONTACT_TOPICS } from "./topics";
@@ -49,13 +51,19 @@ export async function sendContactMessage(_prev: FormState, formData: FormData): 
 
   const { name, email, topic, message } = parsed.data;
   const topicLabel = CONTACT_TOPICS.find((t) => t.value === topic)?.label ?? topic;
-  // Goes to the team mailbox, so the public site never reads player emails.
-  const result = await sendEmail({
-    to: teamMailbox(),
-    replyTo: email,
-    subject: `[Website] ${topicLabel} — ${name}`,
-    text: `From: ${name} <${email}>\nTopic: ${topicLabel}\n\n${message}`,
-  });
+  // Goes to the team inbox, so the public site never reads player emails. Outside live mode it's
+  // redirected like every other email, so a missing TEAM_INBOX only matters at go-live.
+  const inbox = teamInbox();
+  const inboxMissing = !inbox && emailMode() === "live";
+  if (inboxMissing) console.error("[contact] TEAM_INBOX is not set");
+  const result = inboxMissing
+    ? ({ ok: false, error: "TEAM_INBOX is not set" } as const)
+    : await sendEmail({
+        to: inbox ?? "team-inbox@not-configured.invalid",
+        toName: "Team inbox",
+        replyTo: email,
+        ...contactMessage({ name, email, topic: topicLabel, message }),
+      });
   if (!result.ok) {
     return {
       status: "error",

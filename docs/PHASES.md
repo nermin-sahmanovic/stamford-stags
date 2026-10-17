@@ -171,8 +171,8 @@ Captain lineup builder for a match:
 ```
 Read CLAUDE.md. We're on Phase 7.
 
-1. Implement src/lib/email/send.ts with Microsoft Graph sendMail (client
-   credentials, team mailbox). Batch recipients; never put the team in To:
+1. Implement src/lib/email/send.ts with Resend (the captain chose Resend over
+   Microsoft Graph). Batch recipients; never put the team in To:
    (use BCC or one email per player).
 2. POST /api/messages (captain only, verified server-side): audience = team |
    match participants | custom. Write messages + message_recipients with the

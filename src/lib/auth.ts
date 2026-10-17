@@ -89,8 +89,25 @@ export async function requireCaptain(): Promise<CurrentPlayer> {
   return player;
 }
 
-/** What the nav needs to know. */
-export async function getViewer() {
+const ROLE_LABELS: Record<MemberRole, string> = { captain: "Captain", co_captain: "Co-captain", player: "Player" };
+
+export type Viewer = {
+  signedIn: boolean;
+  isCaptain: boolean;
+  /** Roster name; null when signed out or signed in but not on the roster. */
+  name: string | null;
+  email: string | null;
+  roleLabel: string | null;
+};
+
+/** What the nav needs to know, including who is signed in. */
+export async function getViewer(): Promise<Viewer> {
   const { user, player } = await getSession();
-  return { signedIn: user !== null, isCaptain: player?.isCaptain ?? false };
+  return {
+    signedIn: user !== null,
+    isCaptain: player?.isCaptain ?? false,
+    name: player?.fullName ?? null,
+    email: player?.email ?? user?.email ?? null,
+    roleLabel: player ? ROLE_LABELS[player.role] : null,
+  };
 }

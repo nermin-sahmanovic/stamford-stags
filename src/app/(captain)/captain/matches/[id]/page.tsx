@@ -7,11 +7,11 @@ import { Skeleton } from "@/components/ui";
 import { requireCaptain } from "@/lib/auth";
 import { isoToTeamLocalInput } from "@/lib/format";
 import { opponentLabel } from "@/lib/matches/display";
-import { getMatchDetail } from "@/lib/matches/queries";
+import { getMatchDetail, getNonResponders } from "@/lib/matches/queries";
 import { updateMatch } from "../actions";
 import { MatchForm } from "../match-form";
 import { ChecklistEditor } from "./checklist-editor";
-import { DeleteMatch, LineupPublish } from "./match-tools";
+import { DeleteMatch, LineupPublish, RemindNonResponders } from "./match-tools";
 import { ResultsForm } from "./results-form";
 
 export const metadata: Metadata = { title: "Edit match" };
@@ -47,7 +47,7 @@ function Section({ id, title, note, children }: { id: string; title: string; not
 
 async function EditMatch({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [, data] = await Promise.all([requireCaptain(), getMatchDetail(id)]);
+  const [, data, nonResponders] = await Promise.all([requireCaptain(), getMatchDetail(id), getNonResponders(id)]);
   if (!data) notFound();
   const { match, season, lineup, checklist, results, hasStarted } = data;
   const geocodeMissed = match.locationAddress !== null && match.latitude === null;
@@ -97,6 +97,12 @@ async function EditMatch({ params }: { params: Promise<{ id: string }> }) {
               editable={match.status === "scheduled"}
             />
           </Section>
+
+          {match.status === "scheduled" && !hasStarted ? (
+            <Section id="reminders" title="Availability" note="Players answer with one tap from the email, no sign-in.">
+              <RemindNonResponders matchId={match.id} names={nonResponders.map((p) => p.name)} />
+            </Section>
+          ) : null}
         </div>
 
         <div>
