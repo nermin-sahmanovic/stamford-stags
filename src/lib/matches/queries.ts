@@ -1,0 +1,268 @@
+import "server-only";
+import { z } from "zod";
+import type { Database } from "@/lib/database.types";
+import { shortName } from "@/lib/roster/display";
+import { readClient } from "@/lib/supabase/read";
+
+// Match Center, Availability and captain match reads. All use the signed-in user's client,
+// so RLS decides what comes back (members see lineups only once published).
+
+type Enums = Database["public"]["Enums"];
+export type AvailabilityStatus = Enums["availability_status"];
+export type LineType = Enums["line_type"];
+export type RsvpStatus = Enums["rsvp_status"];
+
+/** A match stays "upcoming" until 12 hours after its start, so it's still listed on match day. */
+const UPCOMING_GRACE_MS = 12 * 60 * 60 * 1000;
+
+const MATCH_COLUMNS =
+  "id, opponent, starts_at, home_away, location_name, location_address, captain_notes, status, team_points, opponent_points, latitude, longitude, lineup_published_at";
+
+type MatchRow = Pick<
+  Database["public"]["Tables"]["matches"]["Row"],
+  | "id"
+  | "opponent"
+  | "starts_at"
+  | "home_away"
+  | "location_name"
+  | "location_address"
+  | "captain_notes"
+  | "status"
+  | "team_points"
+  | "opponent_points"
+  | "latitude"
+  | "longitude"
+  | "lineup_published_at"
+>;
+
+export type Match = {
+  id: string;
+  opponent: string;
+  startsAt: string;
+  homeAway: Enums["home_away"];
+  locationName: string | null;
+  locationAddress: string | null;
+  captainNotes: string | null;
+  status: Enums["match_status"];
+  teamPoints: number | null;
+  opponentPoints: number | null;
+  latitude: number | null;
+  longitude: number | null;
+  lineupPublished: boolean;
+};
+
+function toMatch(row: MatchRow): Match {
+  return {
+    id: row.id,
+    opponent: row.opponent,
+    startsAt: row.starts_at,
+    homeAway: row.home_away,
+    locationName: row.location_name,
+    locationAddress: row.location_address,
+    captainNotes: row.captain_notes,
+    status: row.status,
+    teamPoints: row.team_points,
+    opponentPoints: row.opponent_points,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    lineupPublished: row.lineup_published_at !== null,
+  };
+}
+
+const isUpcoming = (m: Match, now: number) =>
+  m.status !== "completed" && Date.parse(m.startsAt) >= now - UPCOMING_GRACE_MS;
+
+/** Current season's matches, split into upcoming (soonest first) and results (latest first). */
+export async function getMatchCenter() {
+  const supabase = await readClient();
+  const { data, error } = await supabase
+    .from("matches")
+    .select(`${MATCH_COLUMNS}, season:seasons!inner(is_current)`)
+    .eq("season.is_current", true)
+    .order("starts_at");
+  if (error) throw error;
+
+  const now = Date.now();
+  const matches = data.map(toMatch);
+  return {
+    upcoming: matches.filter((m) => isUpcoming(m, now)),
+    results: matches.filter((m) => m.status === "completed").reverse(),
+  };
+}
+
+export type LineupLine = {
+  key: string;
+  label: string;
+  lineType: LineType;
+  lineNumber: number;
+  court: string | null;
+  players: { id: string; name: string; rsvp: RsvpStatus }[];
+};
+
+export type LineResult = { lineType: LineType; lineNumber: number; won: boolean; score: string | null };
+export type ChecklistItem = { id: string; label: string; done: boolean; sort: number };
+
+export const lineLabel = (lineType: LineType, lineNumber: number) =>
+  `${lineType === "singles" ? "S" : "D"}${lineNumber}`;
+
+const lineOrder = (lineType: LineType, lineNumber: number) => (lineType === "singles" ? 0 : 10) + lineNumber;
+
+/** Everything on the match detail page. Null if the match doesn't exist (or RLS hides it). */
+export async function getMatchDetail(id: string) {
+  if (!z.guid().safeParse(id).success) return null;
+  const supabase = await readClient();
+  const [match, slots, checklist, results] = await Promise.all([
+    supabase
+      .from("matches")
+      .select(`${MATCH_COLUMNS}, season:seasons!inner(singles_lines, doubles_lines)`)
+      .eq("id", id)
+      .maybeSingle(),
+    supabase
+      .from("lineup_slots")
+      .select("line_type, line_number, seat, court_label, rsvp, player:players!inner(id, full_name)")
+      .eq("match_id", id),
+    supabase.from("checklist_items").select("id, label, done, sort").eq("match_id", id).order("sort").order("created_at"),
+    supabase.from("line_results").select("line_type, line_number, won, score").eq("match_id", id),
+  ]);
+  if (match.error) throw match.error;
+  if (slots.error) throw slots.error;
+  if (checklist.error) throw checklist.error;
+  if (results.error) throw results.error;
+  if (!match.data) return null;
+
+  const lines = new Map<string, LineupLine>();
+  for (const slot of [...slots.data].sort((a, b) => a.seat - b.seat)) {
+    const key = lineLabel(slot.line_type, slot.line_number);
+    const line = lines.get(key) ?? {
+      key,
+      label: key,
+      lineType: slot.line_type,
+      lineNumber: slot.line_number,
+      court: slot.court_label,
+      players: [],
+    };
+    line.court ??= slot.court_label;
+    line.players.push({ id: slot.player.id, name: shortName(slot.player.full_name), rsvp: slot.rsvp });
+    lines.set(key, line);
+  }
+
+  return {
+    match: toMatch(match.data),
+    hasStarted: Date.parse(match.data.starts_at) <= Date.now(),
+    season: { singlesLines: match.data.season.singles_lines, doublesLines: match.data.season.doubles_lines },
+    lineup: [...lines.values()].sort(
+      (a, b) => lineOrder(a.lineType, a.lineNumber) - lineOrder(b.lineType, b.lineNumber),
+    ),
+    checklist: checklist.data satisfies ChecklistItem[],
+    results: results.data
+      .map((r) => ({ lineType: r.line_type, lineNumber: r.line_number, won: r.won, score: r.score }))
+      .sort((a, b) => lineOrder(a.lineType, a.lineNumber) - lineOrder(b.lineType, b.lineNumber)),
+  };
+}
+
+export type MatchDetailData = NonNullable<Awaited<ReturnType<typeof getMatchDetail>>>;
+
+export type TeamRow = {
+  matchId: string;
+  opponent: string;
+  startsAt: string;
+  needed: number;
+  available: number;
+  maybe: number;
+  unavailable: number;
+  replied: number;
+  roster: number;
+  noResponse: { id: string; name: string }[];
+};
+
+/** Availability page: my answer per upcoming match, plus the team view. */
+export async function getAvailabilityBoard(meId: string) {
+  const supabase = await readClient();
+  const { data: matchRows, error } = await supabase
+    .from("matches")
+    .select(`${MATCH_COLUMNS}, season:seasons!inner(is_current)`)
+    .eq("season.is_current", true)
+    .eq("status", "scheduled")
+    .gte("starts_at", new Date().toISOString())
+    .order("starts_at");
+  if (error) throw error;
+
+  const matches = matchRows.map(toMatch);
+  const ids = matches.map((m) => m.id);
+  if (ids.length === 0) return { matches, mine: {}, team: [] as TeamRow[] };
+
+  const [summary, answers, players] = await Promise.all([
+    supabase.from("match_availability_summary").select("*").in("match_id", ids),
+    supabase.from("availability").select("match_id, player_id, status").in("match_id", ids),
+    supabase.from("players").select("id, full_name").eq("is_active", true).order("full_name"),
+  ]);
+  if (summary.error) throw summary.error;
+  if (answers.error) throw answers.error;
+  if (players.error) throw players.error;
+
+  const mine: Record<string, AvailabilityStatus> = {};
+  const answered = new Map<string, Set<string>>();
+  for (const a of answers.data) {
+    if (a.player_id === meId) mine[a.match_id] = a.status;
+    const set = answered.get(a.match_id) ?? new Set<string>();
+    set.add(a.player_id);
+    answered.set(a.match_id, set);
+  }
+
+  const summaryFor = new Map(summary.data.map((s) => [s.match_id, s]));
+  const team: TeamRow[] = matches.map((m) => {
+    const s = summaryFor.get(m.id);
+    const replied = answered.get(m.id) ?? new Set<string>();
+    const noResponse = players.data
+      .filter((p) => !replied.has(p.id))
+      .map((p) => ({ id: p.id, name: shortName(p.full_name) }));
+    const roster = s?.roster_size ?? players.data.length;
+    return {
+      matchId: m.id,
+      opponent: m.opponent,
+      startsAt: m.startsAt,
+      needed: s?.players_needed ?? 0,
+      available: s?.available ?? 0,
+      maybe: s?.maybe ?? 0,
+      unavailable: s?.unavailable ?? 0,
+      replied: roster - noResponse.length,
+      roster,
+      noResponse,
+    };
+  });
+
+  return { matches, mine, team };
+}
+
+export type CaptainMatchRow = Match & { replied: number | null; roster: number | null; available: number | null };
+
+/** Captain list: every match this season with reply counts. */
+export async function getCaptainMatches() {
+  const supabase = await readClient();
+  const [matches, summary] = await Promise.all([
+    supabase
+      .from("matches")
+      .select(`${MATCH_COLUMNS}, season:seasons!inner(is_current)`)
+      .eq("season.is_current", true)
+      .order("starts_at"),
+    supabase.from("match_availability_summary").select("match_id, available, no_response, roster_size"),
+  ]);
+  if (matches.error) throw matches.error;
+  if (summary.error) throw summary.error;
+
+  const summaryFor = new Map(summary.data.map((s) => [s.match_id, s]));
+  const now = Date.now();
+  const rows: CaptainMatchRow[] = matches.data.map((row) => {
+    const s = summaryFor.get(row.id);
+    return {
+      ...toMatch(row),
+      available: s?.available ?? null,
+      roster: s?.roster_size ?? null,
+      replied: s?.roster_size != null && s.no_response != null ? s.roster_size - s.no_response : null,
+    };
+  });
+  return {
+    upcoming: rows.filter((m) => isUpcoming(m, now)),
+    past: rows.filter((m) => !isUpcoming(m, now)).reverse(),
+  };
+}

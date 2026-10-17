@@ -109,6 +109,10 @@ Match `design-reference/`. Those files are the approved look.
 - `seasons` holds league rules: NTRP level, line counts, roster max and the playoff match minimum. Exactly one row has `is_current`.
 - `players` is the roster. `user_id` links to `auth.users` automatically by matching email (a trigger handles this). `role` is one of captain / co_captain / player.
 - `matches` → `lineup_slots` (line type, line number, seat, court, RSVP) → `line_results` (won/score per line).
+  `matches.lineup_published_at`: members read a match's `lineup_slots` only once it's set (RLS); captains always see drafts.
+  `matches.latitude/longitude`: venue coordinates for the forecast, geocoded from the address's ZIP or town when a
+  captain saves (`src/lib/matches/geocode.ts`). Null means "use Stamford, CT".
+- `checklist_items`: per-match match-day checklist. Members read; only captains add, edit or tick items.
 - `availability` has one row per (match, player): available / maybe / unavailable.
 - `events` covers practices, socials, USTA deadlines and registration windows. Matches are not duplicated here.
 - `registrations` stores public Join-form submissions. Anonymous users can insert, and only captains can read.
@@ -119,7 +123,7 @@ Match `design-reference/`. Those files are the approved look.
   - `is_member()`, `is_captain()` and `current_player_id()`.
   - RPCs: `set_my_availability`, `set_my_rsvp`, `update_my_profile`, `eligible_players(match_id)`, `public_team_summary()`, `public_schedule()` and
     `import_players(rows)` (captain CSV upsert by `lower(email)`; blank fields keep values; never sets role).
-  - Views: `player_records`, `match_availability_summary`.
+  - Views: `player_records`, `match_availability_summary` (active players only; includes `roster_size`).
 
 ## Non-negotiables
 
@@ -142,7 +146,7 @@ Match `design-reference/`. Those files are the approved look.
 | Auth emails (magic links) | Custom SMTP in Supabase | Supabase's built-in mailer is heavily rate-limited, so it isn't fit for production |
 | Eligibility | Rating ≤ season NTRP level (and ≥ `min_ntrp` if set). Playoff eligibility = completed matches ≥ `playoff_min_matches` | **TODO captain:** confirm the league's actual rules (age group, any limits on at-level players per lineup) |
 | Lineup format | 2 singles + 3 doubles | Configurable per season |
-| Weather | Open-Meteo (no key) | Phase 5 |
+| Weather | Open-Meteo (no key), `src/lib/weather.ts` | Forecast only up to 15 days ahead ("Forecast available closer to match day" beyond that). Failures show "Forecast unavailable right now" and are cached for minutes only. Geocoding uses Open-Meteo's geocoder too. |
 | Spam on public forms (Join, Contact) | Honeypot field + Cloudflare Turnstile | Outside production, missing keys fall back to Cloudflare's always-pass test keys (`src/lib/spam.ts`). **Real `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` are required before deploy**: production fails closed and the forms refuse submissions without them. |
 | Contact form recipient | The team mailbox (`GRAPH_SENDER_MAILBOX`) | Public pages never read `players`, so contact messages don't go to a player address. `sendEmail` in `src/lib/email/send.ts` is a logging stub until Phase 7. |
 
@@ -162,7 +166,7 @@ Match `design-reference/`. Those files are the approved look.
 - [x] Phase 2 — Auth and roles (magic link + token_hash callback; captain, player, stranger and sign-out tested manually)
 - [x] Phase 3 — Public pages and Join (live stats, Join validation/submission, honeypot and schedule privacy verified manually; Contact uses the email stub)
 - [x] Phase 4 — Roster and directory (20-row test CSV → 15 created / 3 updated / 2 skipped; export re-imports as all unchanged; 67 pgTAP assertions)
-- [ ] Phase 5 — Matches and availability
+- [ ] Phase 5 — Matches and availability (built and checked in the browser at desktop width; 83 pgTAP assertions + anon REST check pass. **Still to do:** the 390px phone check and the under-10-second answer timing)
 - [ ] Phase 6 — Lineup builder
 - [ ] Phase 7 — Communications
 - [ ] Phase 8 — Schedule, photos and results

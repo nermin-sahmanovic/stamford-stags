@@ -283,8 +283,11 @@ export type Database = {
           created_at: string
           home_away: Database["public"]["Enums"]["home_away"]
           id: string
+          latitude: number | null
+          lineup_published_at: string | null
           location_address: string | null
           location_name: string | null
+          longitude: number | null
           opponent: string
           opponent_points: number | null
           season_id: string
@@ -298,8 +301,11 @@ export type Database = {
           created_at?: string
           home_away: Database["public"]["Enums"]["home_away"]
           id?: string
+          latitude?: number | null
+          lineup_published_at?: string | null
           location_address?: string | null
           location_name?: string | null
+          longitude?: number | null
           opponent: string
           opponent_points?: number | null
           season_id: string
@@ -313,8 +319,11 @@ export type Database = {
           created_at?: string
           home_away?: Database["public"]["Enums"]["home_away"]
           id?: string
+          latitude?: number | null
+          lineup_published_at?: string | null
           location_address?: string | null
           location_name?: string | null
+          longitude?: number | null
           opponent?: string
           opponent_points?: number | null
           season_id?: string
@@ -703,6 +712,7 @@ export type Database = {
           maybe: number | null
           no_response: number | null
           players_needed: number | null
+          roster_size: number | null
           starts_at: string | null
           unavailable: number | null
         }

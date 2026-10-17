@@ -37,24 +37,25 @@ insert into public.players (id, full_name, email, phone, usta_number, ntrp_ratin
 
 -------------------------------------------------------------------------------
 -- Matches: 2 completed, 3 upcoming. 14:00 UTC = 10:00 AM Eastern (EDT).
+-- Lat/lon are the venue towns (for the forecast). Greenwich has no lineup, so it stays unpublished.
 -------------------------------------------------------------------------------
 insert into public.matches (id, season_id, opponent, starts_at, home_away, location_name, location_address,
-                            captain_notes, status, team_points, opponent_points) values
+                            captain_notes, status, team_points, opponent_points, latitude, longitude, lineup_published_at) values
   ('33333333-0000-0000-0000-000000000001', '22222222-0000-0000-0000-000000000001', 'Greenwich Lobsters',
    date_trunc('day', now()) - interval '20 days' + interval '14 hours', 'away', 'Greenwich Racquet Center', null,
-   null, 'completed', 2, 3),
+   null, 'completed', 2, 3, 41.0262, -73.6282, null),
   ('33333333-0000-0000-0000-000000000002', '22222222-0000-0000-0000-000000000001', 'Westport Volleys',
    date_trunc('day', now()) - interval '6 days' + interval '14 hours', 'away', 'Westport Tennis Club', null,
-   null, 'completed', 4, 1),
+   null, 'completed', 4, 1, 41.1415, -73.3579, now() - interval '9 days'),
   ('33333333-0000-0000-0000-000000000003', '22222222-0000-0000-0000-000000000001', 'Norwalk Aces',
    date_trunc('day', now()) + interval '8 days' + interval '14 hours', 'home', 'Stamford Tennis Center', 'Courts 3–7',
-   'Warm-up at 9:30. Courts are booked under the team name. Wear team colors for the photo after.', 'scheduled', null, null),
+   'Warm-up at 9:30. Courts are booked under the team name. Wear team colors for the photo after.', 'scheduled', null, null, 41.0534, -73.5387, now() - interval '1 day'),
   ('33333333-0000-0000-0000-000000000004', '22222222-0000-0000-0000-000000000001', 'Darien Drop Shots',
    date_trunc('day', now()) + interval '16 days' + interval '17 hours', 'away', 'Darien Indoor Tennis', null,
-   null, 'scheduled', null, null),
+   null, 'scheduled', null, null, 41.0787, -73.4693, null),
   ('33333333-0000-0000-0000-000000000005', '22222222-0000-0000-0000-000000000001', 'New Canaan Netters',
    date_trunc('day', now()) + interval '23 days' + interval '14 hours', 'home', 'Stamford Tennis Center', null,
-   null, 'scheduled', null, null);
+   null, 'scheduled', null, null, 41.0534, -73.5387, null);
 
 -------------------------------------------------------------------------------
 -- Lineups: the completed Westport match (for records) and the upcoming Norwalk match

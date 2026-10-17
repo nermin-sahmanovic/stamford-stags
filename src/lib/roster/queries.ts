@@ -1,20 +1,10 @@
 import "server-only";
-import { connection } from "next/server";
 import { z } from "zod";
 import type { Database } from "@/lib/database.types";
-import { createClient } from "@/lib/supabase/server";
+import { readClient } from "@/lib/supabase/read";
 
 // Member and captain roster reads. All go through the signed-in user's client, so RLS
 // decides what comes back (members read the roster; captains also read inactive rows).
-
-/**
- * Per-visitor reads, so render at request time: supabase-js reads Date.now() when it checks
- * the session, which Cache Components rejects during a prerender.
- */
-async function readClient() {
-  await connection();
-  return createClient();
-}
 
 type Enums = Database["public"]["Enums"];
 export type AvailabilityStatus = Enums["availability_status"];

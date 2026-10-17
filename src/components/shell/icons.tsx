@@ -249,3 +249,109 @@ export function UserIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function ArrowLeftIcon(props: IconProps) {
+  return (
+    <Icon strokeWidth={2.2} {...props}>
+      <path d="M19 12H5M11 6l-6 6 6 6" />
+    </Icon>
+  );
+}
+
+export function ChevronUpIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="m6 15 6-6 6 6" />
+    </Icon>
+  );
+}
+
+export function ChevronDownIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="m6 9 6 6 6-6" />
+    </Icon>
+  );
+}
+
+export function PencilIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 20h4L19 9l-4-4L4 16z" />
+      <path d="m13.5 6.5 4 4" />
+    </Icon>
+  );
+}
+
+export function TrashIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+    </Icon>
+  );
+}
+
+// Weather (match-day forecast).
+
+export function SunIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </Icon>
+  );
+}
+
+export function PartlyCloudyIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M8 3v1.5M3.5 8H2M4.6 4.6l1 1M12.4 4.6l-1 1" />
+      <path d="M11.5 9.6A4 4 0 1 0 5.4 12" />
+      <path d="M17 20H8a4 4 0 1 1 1.2-7.8A5 5 0 0 1 18.9 13 3.5 3.5 0 0 1 17 20z" />
+    </Icon>
+  );
+}
+
+export function CloudIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M17.5 19H8a5 5 0 1 1 1.4-9.8A6 6 0 0 1 21 11.5 4 4 0 0 1 17.5 19z" />
+    </Icon>
+  );
+}
+
+export function FogIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M17.5 13H8a4.5 4.5 0 1 1 1.3-8.8A5.5 5.5 0 0 1 20 7.5 3 3 0 0 1 17.5 13z" />
+      <path d="M4 17h16M6 21h12" />
+    </Icon>
+  );
+}
+
+export function RainIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M17.5 14H8a4.5 4.5 0 1 1 1.3-8.8A5.5 5.5 0 0 1 20 8.5 3 3 0 0 1 17.5 14z" />
+      <path d="M8 17l-1 3M12 17l-1 3M16 17l-1 3" />
+    </Icon>
+  );
+}
+
+export function SnowIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M17.5 14H8a4.5 4.5 0 1 1 1.3-8.8A5.5 5.5 0 0 1 20 8.5 3 3 0 0 1 17.5 14z" />
+      <path d="M8 18h.01M12 18h.01M16 18h.01M10 21h.01M14 21h.01" />
+    </Icon>
+  );
+}
+
+export function StormIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M17.5 14H8a4.5 4.5 0 1 1 1.3-8.8A5.5 5.5 0 0 1 20 8.5 3 3 0 0 1 17.5 14z" />
+      <path d="m12 14-2 4h4l-2 4" />
+    </Icon>
+  );
+}

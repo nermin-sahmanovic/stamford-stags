@@ -8,6 +8,13 @@ export function initials(name: string) {
   return (first + last).toUpperCase();
 }
 
+/** "Maria Alvarez" → "M. Alvarez"; "M. Alvarez" and single names stay as they are. */
+export function shortName(name: string) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2 || parts[0].endsWith(".")) return name.trim();
+  return `${parts[0][0].toUpperCase()}. ${parts.slice(1).join(" ")}`;
+}
+
 const positionLabels = { singles: "Singles", doubles: "Doubles", both: "Singles & doubles" } as const;
 
 export const positionLabel = (position: keyof typeof positionLabels) => positionLabels[position];

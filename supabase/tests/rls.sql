@@ -13,7 +13,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(67);
+select plan(83);
 
 -------------------------------------------------------------------------------
 -- Fixtures (as postgres)
@@ -147,6 +147,54 @@ select throws_ok(
   'P0002', null,
   'player: set_my_rsvp() rejects a match they are not in the lineup for');
 
+-- Lineups are visible only once published (lineup_published_at).
+reset role;
+update matches set lineup_published_at = null where id = '33333333-0000-0000-0000-000000000003';
+set local role authenticated;
+select is((select count(*)::int from lineup_slots where match_id = '33333333-0000-0000-0000-000000000003'), 0,
+  'player: cannot read an unpublished lineup');
+reset role;
+update matches set lineup_published_at = now() where id = '33333333-0000-0000-0000-000000000003';
+set local role authenticated;
+select is((select count(*)::int from lineup_slots where match_id = '33333333-0000-0000-0000-000000000003'), 8,
+  'player: reads a published lineup');
+update matches set lineup_published_at = null where id = '33333333-0000-0000-0000-000000000003';
+select ok((select lineup_published_at is not null from matches where id = '33333333-0000-0000-0000-000000000003'),
+  'player: cannot unpublish a lineup');
+
+-- Checklist and results are captain-only writes.
+select throws_ok(
+  $$insert into checklist_items (match_id, label) values ('33333333-0000-0000-0000-000000000003', 'Nope')$$,
+  '42501', null,
+  'player: cannot add checklist items');
+update checklist_items set done = true
+ where match_id = '33333333-0000-0000-0000-000000000003' and label = 'Scorecards printed';
+select is(
+  (select done from checklist_items
+    where match_id = '33333333-0000-0000-0000-000000000003' and label = 'Scorecards printed'),
+  false, 'player: cannot tick checklist items');
+select throws_ok(
+  $$insert into line_results (match_id, line_type, line_number, won)
+    values ('33333333-0000-0000-0000-000000000003', 'singles', 1, true)$$,
+  '42501', null,
+  'player: cannot enter results');
+
+-- Clearing an answer deletes your own row only.
+select lives_ok(
+  $$delete from availability
+     where match_id = '33333333-0000-0000-0000-000000000004' and player_id = '11111111-0000-0000-0000-000000000003'$$,
+  'player: can clear own availability');
+select is(
+  (select count(*)::int from availability
+    where match_id = '33333333-0000-0000-0000-000000000004' and player_id = '11111111-0000-0000-0000-000000000003'),
+  0, 'player: own availability row is gone');
+delete from availability
+ where match_id = '33333333-0000-0000-0000-000000000003' and player_id = '11111111-0000-0000-0000-000000000001';
+select is(
+  (select count(*)::int from availability
+    where match_id = '33333333-0000-0000-0000-000000000003' and player_id = '11111111-0000-0000-0000-000000000001'),
+  1, 'player: cannot clear another player''s availability');
+
 -- Matches and profile.
 select throws_ok(
   $$insert into matches (season_id, opponent, starts_at, home_away)
@@ -234,6 +282,38 @@ select is(
   (select row(players_needed, available, maybe, unavailable, no_response)::text
      from match_availability_summary where match_id = '33333333-0000-0000-0000-000000000003'),
   '(8,9,2,1,2)', 'captain: Norwalk summary = needed 8 / available 9 / maybe 2 / out 1 / no response 2');
+select is(
+  (select roster_size::int from match_availability_summary where match_id = '33333333-0000-0000-0000-000000000003'),
+  14, 'captain: summary roster_size counts active players');
+-- A deactivated player's old answer no longer counts.
+update players set is_active = false where id = '11111111-0000-0000-0000-000000000009';
+select is(
+  (select row(available, no_response, roster_size)::text
+     from match_availability_summary where match_id = '33333333-0000-0000-0000-000000000003'),
+  '(8,2,13)', 'captain: summary ignores answers from deactivated players');
+update players set is_active = true where id = '11111111-0000-0000-0000-000000000009';
+
+-- Lineup drafts, publishing and results.
+update matches set lineup_published_at = null where id = '33333333-0000-0000-0000-000000000003';
+select ok((select lineup_published_at is null from matches where id = '33333333-0000-0000-0000-000000000003'),
+  'captain: can unpublish a lineup');
+select is((select count(*)::int from lineup_slots where match_id = '33333333-0000-0000-0000-000000000003'), 8,
+  'captain: reads an unpublished (draft) lineup');
+select lives_ok(
+  $$insert into line_results (match_id, line_type, line_number, won, score)
+    values ('33333333-0000-0000-0000-000000000003', 'singles', 1, true, '6-1 6-1')
+    on conflict (match_id, line_type, line_number) do update set won = excluded.won, score = excluded.score$$,
+  'captain: can enter a line result');
+select is(
+  (select score from line_results
+    where match_id = '33333333-0000-0000-0000-000000000003' and line_type = 'singles' and line_number = 1),
+  '6-1 6-1', 'captain: line result was saved');
+update matches set status = 'completed', team_points = 3, opponent_points = 2
+ where id = '33333333-0000-0000-0000-000000000003';
+select is(
+  (select status || ' ' || team_points || '-' || opponent_points from matches
+    where id = '33333333-0000-0000-0000-000000000003'),
+  'completed 3-2', 'captain: can record the team result');
 
 -- CSV import: upsert by lower(email); blank fields keep existing values; role is never set.
 select is(
