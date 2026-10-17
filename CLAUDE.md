@@ -166,7 +166,7 @@ Match `design-reference/`. Those files are the approved look.
 - [x] Phase 2 — Auth and roles (magic link + token_hash callback; captain, player, stranger and sign-out tested manually)
 - [x] Phase 3 — Public pages and Join (live stats, Join validation/submission, honeypot and schedule privacy verified manually; Contact uses the email stub)
 - [x] Phase 4 — Roster and directory (20-row test CSV → 15 created / 3 updated / 2 skipped; export re-imports as all unchanged; 67 pgTAP assertions)
-- [ ] Phase 5 — Matches and availability (built and checked in the browser at desktop width; 83 pgTAP assertions + anon REST check pass. **Still to do:** the 390px phone check and the under-10-second answer timing)
+- [x] Phase 5 — Matches and availability (one-tap availability, live team view and shortages, match create/edit, results updating the record and forecast behavior verified manually; 83 pgTAP assertions + anon REST check pass)
 - [ ] Phase 6 — Lineup builder
 - [ ] Phase 7 — Communications
 - [ ] Phase 8 — Schedule, photos and results
