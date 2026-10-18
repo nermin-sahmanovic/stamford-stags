@@ -9,7 +9,7 @@ select 'link trigger: captain linked = ' || (select user_id is not null from pla
 set role anon;
 select 'anon players visible: ' || count(*) from players;
 select 'anon summary: ' || public_team_summary()::text;
-select 'anon schedule rows: ' || count(*) from public_schedule();
+select 'anon calendar rows: ' || count(*) from public_calendar();
 select 'anon public news: ' || count(*) from news_posts;
 insert into registrations (full_name,email) values ('Test Person','t@example.com');
 select 'anon insert pending registration: ok';

@@ -5,8 +5,8 @@ import type { Database } from "@/lib/database.types";
 /**
  * Service-role client. It bypasses RLS.
  *
- * Use it only after requireCaptain() passes or a valid rsvp_token is verified,
- * and never import this file from a client component.
+ * Use it only after requireCaptain() passes, or to call an RPC that verifies a secret token
+ * itself (rsvp_tokens, calendar_feed), and never import this file from a client component.
  */
 export function createAdminClient() {
   return createClient<Database>(

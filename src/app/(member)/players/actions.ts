@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireMember } from "@/lib/auth";
+import { personalFeedUrl } from "@/lib/calendar/queries";
 import { echoValues, firstFieldErrors, type FormState } from "@/lib/form-state";
 import { myProfileSchema } from "@/lib/roster/schema";
 import { createClient } from "@/lib/supabase/server";
@@ -41,4 +42,20 @@ export async function updateMyProfile(_prev: FormState, formData: FormData): Pro
   revalidatePath("/players");
   revalidatePath(`/players/${me.id}`);
   return { status: "success" };
+}
+
+export type CalendarTokenResult = { ok: true; feedUrl: string } | { ok: false; message: string };
+
+/** "Reset link": a new personal calendar token. The old feed URL stops working at once. */
+export async function regenerateCalendarToken(): Promise<CalendarTokenResult> {
+  const me = await requireMember();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("regenerate_my_calendar_token");
+  if (error) {
+    console.error("[players] regenerate_my_calendar_token failed:", error.message);
+    return { ok: false, message: "Something went wrong. Please try again." };
+  }
+  revalidatePath(`/players/${me.id}`);
+  revalidatePath("/schedule");
+  return { ok: true, feedUrl: personalFeedUrl(data) };
 }

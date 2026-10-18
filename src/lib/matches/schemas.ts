@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { teamLocalInputToIso } from "@/lib/format";
+import { optionalText, teamDateTime } from "@/lib/form-schemas";
 
 // Match, results, checklist and availability input. Shared by server actions and client forms.
 
@@ -20,27 +20,9 @@ export const DEFAULT_CHECKLIST = [
   "Report scores to USTA",
 ];
 
-const optionalText = (max: number, label: string) =>
-  z
-    .string()
-    .trim()
-    .max(max, `${label} must be ${max} characters or fewer.`)
-    .transform((value) => (value === "" ? null : value));
-
 export const matchFormSchema = z.object({
   opponent: z.string().trim().min(1, "Enter the opponent.").max(80, "Keep the opponent under 80 characters."),
-  starts_at: z
-    .string()
-    .trim()
-    .min(1, "Enter the date and start time.")
-    .transform((value, ctx) => {
-      const iso = teamLocalInputToIso(value);
-      if (!iso) {
-        ctx.addIssue({ code: "custom", message: "Enter a valid date and start time." });
-        return z.NEVER;
-      }
-      return iso;
-    }),
+  starts_at: teamDateTime("Enter the date and start time."),
   home_away: z.enum(HOME_AWAY, { message: "Choose home or away." }),
   location_name: optionalText(120, "Venue"),
   location_address: optionalText(200, "Address"),

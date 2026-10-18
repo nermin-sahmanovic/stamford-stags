@@ -4,6 +4,7 @@ export const protectedPrefixes = [
   "/availability",
   "/players",
   "/messages",
+  "/photos",
   "/captain",
 ] as const;
 

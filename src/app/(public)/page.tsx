@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { CourtLinesFull } from "@/components/court-lines";
@@ -10,7 +11,7 @@ import {
 } from "@/components/shell/icons";
 import { Pill, SectionHeading, Skeleton, StatCard, type PillTone } from "@/components/ui";
 import { formatShortDate, formatTime, formatWeekday, formatWeekdayDate } from "@/lib/format";
-import { getPublicNews, getTeamSummary, type NewsPost } from "@/lib/public-data";
+import { getPublicNews, getPublicPhotos, getTeamPhoto, getTeamSummary, type NewsPost } from "@/lib/public-data";
 
 export default function HomePage() {
   return (
@@ -28,6 +29,9 @@ export default function HomePage() {
             <Latest />
           </Suspense>
         </div>
+        <Suspense fallback={null}>
+          <PhotoStrip />
+        </Suspense>
         <ContactCard />
       </div>
     </>
@@ -58,11 +62,9 @@ function Hero() {
           </p>
         </div>
         <div className="flex flex-col gap-4">
-          {/* Team photo arrives with Phase 8 (photos). */}
-          <div className="flex h-44 flex-col items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-dashed border-slate-600 bg-navy-2 text-[13px] font-medium text-muted">
-            <CameraIcon size={26} />
-            Team photo
-          </div>
+          <Suspense fallback={<PhotoPlaceholder />}>
+            <HeroPhoto />
+          </Suspense>
           <div className="flex flex-col gap-2.5">
             <Link
               href="/join"
@@ -82,6 +84,74 @@ function Hero() {
           </div>
         </div>
       </div>
+    </section>
+  );
+}
+
+function PhotoPlaceholder() {
+  return (
+    <div className="flex aspect-[16/10] flex-col items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-dashed border-slate-600 bg-navy-2 text-[13px] font-medium text-muted md:aspect-[4/3]">
+      <CameraIcon size={26} />
+      Team photo
+    </div>
+  );
+}
+
+/**
+ * The team photo the captain chose in the gallery; the placeholder until one is set.
+ * Cropped to fill: 16:10 on phones, 4:3 in the desktop hero column. Group shots usually have
+ * faces in the upper third, so the crop keeps the top (focal point 50% 35%).
+ */
+async function HeroPhoto() {
+  const photo = await getTeamPhoto();
+  if (!photo) return <PhotoPlaceholder />;
+  return (
+    <Link
+      href="/gallery"
+      className="block aspect-[16/10] overflow-hidden rounded-[14px] bg-navy-2 md:aspect-[4/3]"
+    >
+      <Image
+        src={photo.fullUrl}
+        alt={photo.caption ?? "Stamford Stags team photo"}
+        width={photo.width}
+        height={photo.height}
+        unoptimized
+        priority
+        className="size-full object-cover object-[50%_35%]"
+      />
+    </Link>
+  );
+}
+
+/** The latest public photos under the fold; hidden until there are some. */
+async function PhotoStrip() {
+  const photos = await getPublicPhotos(6);
+  if (photos.length === 0) return null;
+  return (
+    <section aria-labelledby="photos-heading" className="px-4 pt-4 pb-2">
+      <div className="mb-2.5 flex items-baseline justify-between gap-3">
+        <SectionHeading id="photos-heading">From the courts</SectionHeading>
+        <Link href="/gallery" className="inline-flex min-h-11 items-center text-[14px] font-semibold">
+          Gallery
+        </Link>
+      </div>
+      <ul className="grid grid-cols-3 gap-1 md:grid-cols-6">
+        {photos.map((photo) => (
+          <li key={photo.id}>
+            <Link href="/gallery" className="block aspect-square overflow-hidden rounded-[8px] bg-line">
+              <Image
+                src={photo.thumbUrl}
+                alt={photo.caption ?? "Team photo"}
+                width={photo.width}
+                height={photo.height}
+                unoptimized
+                loading="lazy"
+                className="size-full object-cover"
+              />
+            </Link>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

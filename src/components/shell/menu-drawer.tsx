@@ -140,7 +140,7 @@ export function MenuDrawer({ showCaptain = false, signedIn = false, account = nu
             {renderLinks(visibleItems(primaryNav, showCaptain))}
           </ul>
           <hr className="mx-3 my-2 border-navy-2" />
-          <ul className="flex flex-col gap-0.5">{renderLinks(menuNav)}</ul>
+          <ul className="flex flex-col gap-0.5">{renderLinks(visibleItems(menuNav, showCaptain))}</ul>
           <hr className="mx-3 my-2 border-navy-2" />
           {signedIn ? (
             <form action={signOut}>

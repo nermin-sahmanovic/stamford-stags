@@ -50,7 +50,8 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
+  // Calendar feeds are polled by calendar apps with no session, so they skip the proxy.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!api/calendar/|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

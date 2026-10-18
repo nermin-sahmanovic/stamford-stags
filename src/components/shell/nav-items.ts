@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import {
   AvailabilityIcon,
+  CameraIcon,
   CaptainIcon,
   HomeIcon,
   InfoIcon,
@@ -35,10 +36,13 @@ export const menuNav: NavItem[] = [
   { href: "/about", label: "About", icon: InfoIcon },
   { href: "/join", label: "Join the Team", icon: JoinIcon },
   { href: "/schedule", label: "Schedule", icon: ScheduleIcon },
+  { href: "/captain/events", label: "Manage events", icon: ScheduleIcon, captainOnly: true },
   { href: "/results", label: "Results", icon: ResultsIcon },
+  { href: "/gallery", label: "Gallery", icon: CameraIcon },
   { href: "/players", label: "Players", icon: PlayersIcon },
   { href: "/players/me", label: "My profile", icon: UserIcon },
   { href: "/messages", label: "Messages", icon: MessagesIcon },
+  { href: "/photos", label: "Team photos", icon: CameraIcon },
   { href: "/contact", label: "Contact", icon: MailIcon },
 ];
 

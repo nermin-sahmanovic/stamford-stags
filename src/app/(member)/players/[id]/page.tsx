@@ -7,10 +7,12 @@ import { PlayerAvatar } from "@/components/player-avatar";
 import { MailIcon, PhoneIcon } from "@/components/shell/icons";
 import { Pill, SectionHeading, Skeleton, StatCard } from "@/components/ui";
 import { requireMember } from "@/lib/auth";
+import { getMyFeedUrl } from "@/lib/calendar/queries";
 import { formatShortDate } from "@/lib/format";
 import { positionLabel, ratingLabel } from "@/lib/roster/display";
 import { getPlayerProfile, type MatchHistoryItem } from "@/lib/roster/queries";
 import { ROLE_LABELS } from "@/lib/roster/schema";
+import { CalendarCard } from "./calendar-card";
 import { ProfileForm } from "./profile-form";
 
 export const metadata: Metadata = { title: "Player" };
@@ -43,6 +45,7 @@ async function PlayerProfile({ params }: { params: Promise<{ id: string }> }) {
   const { player, wins, losses, history } = profile;
   const isMe = player.id === me.id;
   const played = wins + losses;
+  const feedUrl = isMe ? await getMyFeedUrl() : null;
 
   return (
     <>
@@ -97,7 +100,10 @@ async function PlayerProfile({ params }: { params: Promise<{ id: string }> }) {
         </div>
 
         {isMe ? (
-          <ProfileForm phone={player.phone ?? ""} position={player.position_pref} />
+          <div className="grid gap-5 md:grid-cols-2 md:items-start">
+            <ProfileForm phone={player.phone ?? ""} position={player.position_pref} />
+            <CalendarCard feedUrl={feedUrl} />
+          </div>
         ) : null}
 
         <section aria-labelledby="history-heading" className="flex flex-col gap-2.5">

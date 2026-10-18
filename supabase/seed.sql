@@ -137,7 +137,21 @@ insert into public.events (season_id, type, title, starts_at, ends_at, location,
   ('22222222-0000-0000-0000-000000000001', 'usta_deadline', 'Playoff roster deadline',
    date_trunc('day', now()) + interval '30 days' + interval '16 hours', null, null, false),
   (null, 'registration', 'Spring 2027 registration opens',
-   date_trunc('day', now()) + interval '60 days' + interval '14 hours', null, null, true);
+   date_trunc('day', now()) + interval '60 days' + interval '14 hours', null, null, true),
+  ('22222222-0000-0000-0000-000000000001', 'practice', 'Open hitting session',
+   date_trunc('day', now()) + interval '11 days' + interval '13 hours',
+   date_trunc('day', now()) + interval '11 days' + interval '15 hours', 'Stamford Tennis Center', true);
+
+-------------------------------------------------------------------------------
+-- Standings (entered by hand from the league site). Stags lines match the two seeded results.
+-------------------------------------------------------------------------------
+insert into public.standings (season_id, rank, team_name, wins, losses, lines_won, lines_lost, is_stags) values
+  ('22222222-0000-0000-0000-000000000001', 1, 'Greenwich Lobsters',  2, 0, 7, 1, false),
+  ('22222222-0000-0000-0000-000000000001', 2, 'Stamford Stags',      1, 1, 4, 4, true),
+  ('22222222-0000-0000-0000-000000000001', 3, 'Norwalk Aces',        1, 1, 4, 4, false),
+  ('22222222-0000-0000-0000-000000000001', 4, 'New Canaan Netters',  1, 1, 3, 5, false),
+  ('22222222-0000-0000-0000-000000000001', 5, 'Westport Volleys',    0, 2, 2, 6, false),
+  ('22222222-0000-0000-0000-000000000001', 6, 'Darien Drop Shots',   0, 0, 0, 0, false);
 
 -------------------------------------------------------------------------------
 -- Registrations awaiting review

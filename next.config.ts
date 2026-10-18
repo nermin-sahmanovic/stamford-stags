@@ -14,6 +14,10 @@ const nextConfig: NextConfig = {
   // Keep the dev badge off the bottom tab bar.
   devIndicators: { position: "top-right" },
   partialPrefetching: true,
+  experimental: {
+    // Photo uploads: the browser shrinks to ~1-2 MB, but the server accepts up to 8 MB when it can't.
+    serverActions: { bodySizeLimit: "9mb" },
+  },
   turbopack: {
     rules: {
       "*.css": {

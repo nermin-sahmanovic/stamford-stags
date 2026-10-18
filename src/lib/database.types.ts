@@ -85,6 +85,32 @@ export type Database = {
           },
         ]
       }
+      calendar_tokens: {
+        Row: {
+          created_at: string
+          player_id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          player_id: string
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          player_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_tokens_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: true
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checklist_items: {
         Row: {
           created_at: string
@@ -501,6 +527,83 @@ export type Database = {
           },
         ]
       }
+      photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          height: number
+          id: string
+          is_public: boolean
+          is_team_photo: boolean
+          match_id: string | null
+          path: string
+          season_id: string | null
+          thumb_path: string
+          updated_at: string
+          uploaded_by: string | null
+          width: number
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          height: number
+          id?: string
+          is_public?: boolean
+          is_team_photo?: boolean
+          match_id?: string | null
+          path: string
+          season_id?: string | null
+          thumb_path: string
+          updated_at?: string
+          uploaded_by?: string | null
+          width: number
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          height?: number
+          id?: string
+          is_public?: boolean
+          is_team_photo?: boolean
+          match_id?: string | null
+          path?: string
+          season_id?: string | null
+          thumb_path?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photos_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "match_availability_summary"
+            referencedColumns: ["match_id"]
+          },
+          {
+            foreignKeyName: "photos_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photos_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photos_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       players: {
         Row: {
           created_at: string
@@ -724,6 +827,56 @@ export type Database = {
         }
         Relationships: []
       }
+      standings: {
+        Row: {
+          created_at: string
+          id: string
+          is_stags: boolean
+          lines_lost: number
+          lines_won: number
+          losses: number
+          rank: number
+          season_id: string
+          team_name: string
+          updated_at: string
+          wins: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_stags?: boolean
+          lines_lost?: number
+          lines_won?: number
+          losses?: number
+          rank: number
+          season_id: string
+          team_name: string
+          updated_at?: string
+          wins?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_stags?: boolean
+          lines_lost?: number
+          lines_won?: number
+          losses?: number
+          rank?: number
+          season_id?: string
+          team_name?: string
+          updated_at?: string
+          wins?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "standings_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       match_availability_summary: {
@@ -761,6 +914,7 @@ export type Database = {
         Args: { p_answer: string; p_token: string }
         Returns: Json
       }
+      calendar_feed: { Args: { p_token: string }; Returns: Json }
       current_player_id: { Args: never; Returns: string }
       eligible_players: {
         Args: { p_match_id: string }
@@ -791,22 +945,29 @@ export type Database = {
         }[]
       }
       peek_rsvp_token: { Args: { p_token: string }; Returns: Json }
-      public_schedule: {
-        Args: { p_from?: string }
+      public_calendar: {
+        Args: { p_from?: string; p_to?: string }
         Returns: {
+          ends_at: string
           home_away: Database["public"]["Enums"]["home_away"]
+          id: string
           kind: string
           location_name: string
+          opponent_points: number
           starts_at: string
           status: Database["public"]["Enums"]["match_status"]
+          team_points: number
           title: string
         }[]
       }
+      public_results: { Args: never; Returns: Json }
       public_team_summary: { Args: never; Returns: Json }
+      regenerate_my_calendar_token: { Args: never; Returns: string }
       save_lineup: {
         Args: { p_match_id: string; p_publish?: boolean; p_slots: Json }
         Returns: string[]
       }
+      save_standings: { Args: { p_rows: Json }; Returns: undefined }
       set_my_availability: {
         Args: {
           p_match_id: string
@@ -822,6 +983,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_team_photo: { Args: { p_photo_id: string }; Returns: undefined }
       update_my_profile: {
         Args: {
           p_phone: string

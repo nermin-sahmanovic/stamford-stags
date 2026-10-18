@@ -13,7 +13,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(120);
+select plan(185);
 
 -------------------------------------------------------------------------------
 -- Fixtures (as postgres)
@@ -66,9 +66,9 @@ select is((select count(*)::int from news_posts where not is_public), 0, 'anon: 
 
 select is((public_team_summary() ->> 'player_count')::int, 14, 'anon: public_team_summary() returns player_count');
 select is((public_team_summary() ->> 'open_spots')::int,    2, 'anon: public_team_summary() returns open_spots');
-select ok((select count(*) from public_schedule()) > 0, 'anon: public_schedule() returns rows');
-select ok(not exists (select 1 from public_schedule() where title in ('Team practice', 'Playoff roster deadline')),
-  'anon: public_schedule() hides private events');
+select ok((select count(*) from public_calendar()) > 0, 'anon: public_calendar() returns rows');
+select ok(not exists (select 1 from public_calendar() where title in ('Team practice', 'Playoff roster deadline')),
+  'anon: public_calendar() hides private events');
 
 select lives_ok(
   $$insert into registrations (full_name, email) values ('Test Person', 't@rls-test.invalid')$$,
@@ -551,6 +551,204 @@ select throws_ok(
 select throws_ok(
   $$select apply_rsvp_token('bbbbbbbb-0000-0000-0000-000000000001', 'whatever')$$,
   '22023', null, 'tokens: an unknown answer is refused');
+
+-------------------------------------------------------------------------------
+-- PHASE 8: standings, photos (+ storage), events, calendar tokens and feeds
+--   Fixtures: one public and one private photo with their storage objects (no file
+--   bytes needed: policies only look at storage.objects rows). J. Chen (P03) is made
+--   an active player again; their calendar token is fixed so the feed can be tested.
+-------------------------------------------------------------------------------
+reset role;
+update public.players set is_active = true, role = 'player' where id = '11111111-0000-0000-0000-000000000003';
+update public.calendar_tokens set token = 'cccccccc-0000-0000-0000-000000000003'
+ where player_id = '11111111-0000-0000-0000-000000000003';
+update public.calendar_tokens set token = 'cccccccc-0000-0000-0000-000000000005'
+ where player_id = '11111111-0000-0000-0000-000000000005';
+insert into public.photos (id, path, thumb_path, width, height, caption, is_public) values
+  ('dddddddd-0000-0000-0000-000000000001', 'rls-test/public.jpg',  'rls-test/public-thumb.jpg',  800, 600, 'Public', true),
+  ('dddddddd-0000-0000-0000-000000000002', 'rls-test/private.jpg', 'rls-test/private-thumb.jpg', 800, 600, 'Private', false);
+insert into storage.objects (bucket_id, name) values
+  ('photos', 'rls-test/public.jpg'), ('photos', 'rls-test/public-thumb.jpg'),
+  ('photos', 'rls-test/private.jpg'), ('photos', 'rls-test/private-thumb.jpg');
+
+select is(
+  (select count(*)::int from calendar_tokens t join players p on p.id = t.player_id where p.email = 'someone.else@rls-test.invalid'),
+  1, 'calendar token: a new roster row gets a calendar token');
+
+-- ANON
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claims', '', true);
+set local role anon;
+
+select ok((select count(*) from standings) > 0, 'anon: reads standings');
+select throws_ok(
+  $$insert into standings (season_id, rank, team_name) values ('22222222-0000-0000-0000-000000000001', 9, 'Nope')$$,
+  '42501', null, 'anon: cannot add standings');
+update standings set wins = 99;
+delete from standings;
+select ok((select count(*) from standings) > 0 and not exists (select 1 from standings where wins = 99),
+  'anon: cannot change or delete standings');
+select throws_ok($$select save_standings('[]'::jsonb)$$, '42501', null, 'anon: cannot call save_standings()');
+select is((select count(*)::int from photos where path like 'rls-test/%'), 1, 'anon: sees only the public photo');
+select is(
+  (select string_agg(name, ',' order by name) from storage.objects where name like 'rls-test/%'),
+  'rls-test/public-thumb.jpg,rls-test/public.jpg', 'anon: sees only the public photo''s files');
+select throws_ok(
+  $$insert into storage.objects (bucket_id, name) values ('photos', 'rls-test/anon.jpg')$$,
+  '42501', null, 'anon: cannot upload photo files');
+update photos set is_public = true where id = 'dddddddd-0000-0000-0000-000000000002';
+select is((select count(*)::int from photos where path like 'rls-test/%'), 1, 'anon: cannot make a photo public');
+select is((select count(*)::int from events),          0, 'anon: cannot read events directly');
+select is((select count(*)::int from calendar_tokens), 0, 'anon: cannot read calendar tokens');
+select ok(exists (select 1 from public_calendar(now() - interval '60 days') where kind = 'match' and team_points is not null),
+  'anon: public_calendar() includes match scores');
+select ok(exists (select 1 from public_calendar() where title = 'Open hitting session'),
+  'anon: public_calendar() includes public events');
+select is((public_results() ->> 'singles_won')::int, 2, 'anon: public_results() counts singles lines won');
+select is((public_results() -> 'standings' -> 0 ->> 'rank')::int, 1, 'anon: public_results() includes standings by rank');
+select ok(not (public_results()::text ~ 'J\. Chen|M\. Alvarez'), 'anon: public_results() has no player names');
+select throws_ok($$select calendar_feed('cccccccc-0000-0000-0000-000000000003')$$, '42501', null,
+  'anon: cannot call calendar_feed() (service role only)');
+select throws_ok($$select regenerate_my_calendar_token()$$, '42501', null,
+  'anon: cannot call regenerate_my_calendar_token()');
+
+-- STRANGER (signed in, not on the roster)
+reset role;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-0000-0000-000000000a99', true);
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000a99","role":"authenticated"}', true);
+set local role authenticated;
+
+select is((select count(*)::int from photos where path like 'rls-test/%'), 1, 'stranger: sees only the public photo');
+select is((select count(*)::int from storage.objects where name like 'rls-test/%'), 2, 'stranger: sees only public photo files');
+select is((select count(*)::int from calendar_tokens), 0, 'stranger: has no calendar token to read');
+select throws_ok($$select regenerate_my_calendar_token()$$, '42501', null, 'stranger: cannot create a calendar token');
+
+-- PLAYER (J. Chen)
+reset role;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-0000-0000-000000000a03', true);
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000a03","role":"authenticated"}', true);
+set local role authenticated;
+
+select is((select count(*)::int from photos where path like 'rls-test/%'), 2, 'player: sees every photo');
+select is((select count(*)::int from storage.objects where name like 'rls-test/%'), 4, 'player: sees every photo file');
+update photos set caption = 'Hacked' where id = 'dddddddd-0000-0000-0000-000000000002';
+delete from photos where id = 'dddddddd-0000-0000-0000-000000000001';
+select is(
+  (select string_agg(coalesce(caption, ''), ',' order by caption) from photos where path like 'rls-test/%'),
+  'Private,Public', 'player: cannot edit or delete photos');
+select throws_ok(
+  $$insert into photos (path, thumb_path, width, height) values ('rls-test/p.jpg', 'rls-test/p-t.jpg', 1, 1)$$,
+  '42501', null, 'player: cannot add photos');
+select throws_ok(
+  $$insert into storage.objects (bucket_id, name) values ('photos', 'rls-test/player.jpg')$$,
+  '42501', null, 'player: cannot upload photo files');
+-- The Storage API sets this before deleting; without it a trigger refuses every direct delete.
+select set_config('storage.allow_delete_query', 'true', true);
+delete from storage.objects where name = 'rls-test/private.jpg';
+select is((select count(*)::int from storage.objects where name like 'rls-test/%'), 4, 'player: cannot delete photo files');
+select is(
+  (select string_agg(token::text, ',') from calendar_tokens),
+  'cccccccc-0000-0000-0000-000000000003', 'player: reads only their own calendar token');
+select ok(regenerate_my_calendar_token() <> 'cccccccc-0000-0000-0000-000000000003'::uuid,
+  'player: regenerate_my_calendar_token() returns a new token');
+select ok((select token <> 'cccccccc-0000-0000-0000-000000000003'::uuid from calendar_tokens),
+  'player: the old calendar token is replaced');
+update calendar_tokens set token = 'cccccccc-0000-0000-0000-0000000000ee';
+select ok(not exists (select 1 from calendar_tokens where token = 'cccccccc-0000-0000-0000-0000000000ee'),
+  'player: cannot set their own token directly');
+select is((select count(*)::int from events where not is_public) > 0, true, 'player: reads members-only events');
+select throws_ok(
+  $$insert into events (type, title, starts_at) values ('social', 'Nope', now())$$,
+  '42501', null, 'player: cannot add events');
+update events set title = 'Hacked' where title = 'Team practice';
+select ok(not exists (select 1 from events where title = 'Hacked'), 'player: cannot edit events');
+select throws_ok($$select save_standings('[]'::jsonb)$$, '42501', null, 'player: cannot call save_standings()');
+select throws_ok($$select calendar_feed('cccccccc-0000-0000-0000-000000000005')$$, '42501', null,
+  'player: cannot call calendar_feed() directly');
+select throws_ok($$select set_team_photo('dddddddd-0000-0000-0000-000000000001')$$, '42501', null,
+  'player: cannot choose the Home team photo');
+update photos set is_team_photo = true where id = 'dddddddd-0000-0000-0000-000000000001';
+select ok(not exists (select 1 from photos where is_team_photo), 'player: cannot flag a team photo directly');
+
+-- CAPTAIN
+reset role;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-0000-0000-000000000a01', true);
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000a01","role":"authenticated"}', true);
+set local role authenticated;
+
+select lives_ok(
+  $$insert into events (id, type, title, starts_at, is_public)
+    values ('eeeeeeee-0000-0000-0000-000000000001', 'usta_deadline', 'Test deadline', now() + interval '5 days', false)$$,
+  'captain: can add an event');
+update events set is_public = true where id = 'eeeeeeee-0000-0000-0000-000000000001';
+select ok(exists (select 1 from public_calendar() where id = 'eeeeeeee-0000-0000-0000-000000000001'),
+  'captain: a public event shows in public_calendar()');
+select lives_ok($$delete from events where id = 'eeeeeeee-0000-0000-0000-000000000001'$$, 'captain: can delete an event');
+select is((select count(*)::int from events where id = 'eeeeeeee-0000-0000-0000-000000000001'), 0, 'captain: event is gone');
+update photos set is_public = true where id = 'dddddddd-0000-0000-0000-000000000002';
+select ok((select is_public from photos where id = 'dddddddd-0000-0000-0000-000000000002'), 'captain: can make a photo public');
+
+-- Home team photo: one at most, always public.
+update photos set is_public = false where id = 'dddddddd-0000-0000-0000-000000000002';
+select lives_ok($$select set_team_photo('dddddddd-0000-0000-0000-000000000002')$$, 'captain: can choose a private photo as the team photo');
+select is(
+  (select is_team_photo::text || ' ' || is_public::text from photos where id = 'dddddddd-0000-0000-0000-000000000002'),
+  'true true', 'captain: choosing the team photo also makes it public');
+select lives_ok($$select set_team_photo('dddddddd-0000-0000-0000-000000000001')$$, 'captain: can switch the team photo');
+select is(
+  (select string_agg(id::text, ',') from photos where is_team_photo),
+  'dddddddd-0000-0000-0000-000000000001', 'captain: switching leaves exactly one team photo');
+select throws_ok(
+  $$update photos set is_team_photo = true where id = 'dddddddd-0000-0000-0000-000000000002'$$,
+  '23505', null, 'captain: a second team photo is refused');
+select throws_ok(
+  $$update photos set is_public = false where id = 'dddddddd-0000-0000-0000-000000000001'$$,
+  '23514', null, 'captain: the team photo cannot be made private while it is the team photo');
+select throws_ok($$select set_team_photo('dddddddd-0000-0000-0000-0000000000ff')$$, 'P0002', null,
+  'captain: an unknown photo cannot be the team photo');
+select lives_ok(
+  $$insert into storage.objects (bucket_id, name) values ('photos', 'rls-test/captain.jpg')$$,
+  'captain: can upload photo files');
+select lives_ok($$delete from storage.objects where name = 'rls-test/captain.jpg'$$, 'captain: can delete photo files');
+select is((select count(*)::int from storage.objects where name = 'rls-test/captain.jpg'), 0, 'captain: the deleted file is gone');
+select lives_ok(
+  $$select save_standings('[{"rank":1,"team_name":"Stamford Stags","wins":2,"losses":0,"lines_won":7,"lines_lost":1,"is_stags":true},
+                           {"rank":2,"team_name":"Norwalk Aces","wins":1,"losses":1}]'::jsonb)$$,
+  'captain: save_standings() replaces the table');
+select is(
+  (select string_agg(rank || ' ' || team_name || ' ' || wins || '-' || losses, ', ' order by rank) from standings),
+  '1 Stamford Stags 2-0, 2 Norwalk Aces 1-1', 'captain: standings hold exactly the saved rows');
+select throws_ok(
+  $$select save_standings('[{"rank":1,"team_name":"A","is_stags":true},{"rank":2,"team_name":"B","is_stags":true}]'::jsonb)$$,
+  '23505', null, 'captain: only one standings row can be the Stags');
+
+-- After the captain made it public, anon can see the second photo's files too.
+reset role;
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claims', '', true);
+set local role anon;
+select is((select count(*)::int from storage.objects where name like 'rls-test/%'), 4,
+  'anon: files of a photo made public become readable');
+select is((select string_agg(id::text, ',') from photos where is_team_photo), 'dddddddd-0000-0000-0000-000000000001',
+  'anon: reads the Home team photo');
+select throws_ok($$select set_team_photo('dddddddd-0000-0000-0000-000000000002')$$, '42501', null,
+  'anon: cannot choose the Home team photo');
+
+-- SERVICE ROLE: personal calendar feed
+reset role;
+update public.players set is_active = false where id = '11111111-0000-0000-0000-000000000005';
+set local role service_role;
+select is(
+  (select count(*)::int from jsonb_array_elements(
+     calendar_feed((select token from calendar_tokens where player_id = '11111111-0000-0000-0000-000000000003')) -> 'items') i
+   where i ->> 'title' = 'Team practice'),
+  1, 'calendar feed: includes members-only events for a valid token');
+select is(
+  calendar_feed((select token from calendar_tokens where player_id = '11111111-0000-0000-0000-000000000003')) ->> 'player',
+  'J. Chen', 'calendar feed: names the token''s player');
+select is(calendar_feed('cccccccc-0000-0000-0000-000000000003'), null, 'calendar feed: a reset (old) token returns nothing');
+select is(calendar_feed('cccccccc-0000-0000-0000-000000000005'), null, 'calendar feed: an inactive player''s token returns nothing');
+select is(calendar_feed('cccccccc-0000-0000-0000-0000000000ff'), null, 'calendar feed: an unknown token returns nothing');
 
 -------------------------------------------------------------------------------
 reset role;
