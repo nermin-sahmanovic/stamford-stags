@@ -229,5 +229,6 @@ Match `design-reference/`. Those files are the approved look.
       Invite + welcome email, quick actions, recent messages; empty states, styled 404/error pages, focus rings, skip link,
       drawer focus trap, 44px targets, 4.5:1 text; manifest + SS-mark icons. Lighthouse mobile on a production build:
       Home 96, Match Center 91, Availability 95, all 100 accessibility / best practices / SEO; 195 pgTAP assertions +
-      anon REST/Storage check pass)
+      anon REST/Storage check pass. Captain's manual tests passed: a match week run from the dashboard alone, the invite
+      flow, empty states and the 404 page)
 - [ ] Phase 10 — Deploy (before go-live: real Turnstile keys, verified Resend domain + `EMAIL_MODE=live` on Production only, `CRON_SECRET`, custom SMTP for auth emails)
