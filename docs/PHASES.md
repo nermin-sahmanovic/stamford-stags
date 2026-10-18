@@ -202,14 +202,26 @@ Read CLAUDE.md. We're on Phase 7.
 ```
 Read CLAUDE.md. We're on Phase 8.
 
-- Calendar with month and agenda views, combining matches and events, plus mobile cards.
+- Calendar with month and agenda views, combining matches and events, plus mobile
+  cards.
 - Captain CRUD for events (practice, social, USTA deadline, registration).
-- An ICS subscription feed at /api/calendar.ics so players can subscribe from their
-  phone calendar.
-- Photos: a Supabase Storage bucket (members read; captain uploads) and a gallery grid.
+- ICS subscription feed:
+  - /api/calendar/public.ics has public matches and events only.
+  - /api/calendar/[token].ics is a per-player secret token that includes
+    member-only events. Tokens can be regenerated from the player's profile.
+  - Add a "Subscribe" button with instructions for iPhone, Android and Outlook.
+- Photos: a Supabase Storage bucket with RLS (members read, captain uploads and
+  deletes). Each photo has an is_public flag the captain controls; only public
+  photos may appear on public pages. Resize and compress uploads from phones, and
+  strip EXIF/GPS data. Gallery grid.
 - Results: recent results, season stats, and a new migration for a manually
-  maintained standings table.
+  maintained standings table (captain edits; members and public read).
+- Update scripts/test-anon-access.ps1 to cover the new storage and standings rules.
 ```
+
+Follow-ups done in the same phase: "Add event" and tappable event cards on Schedule plus a
+"Manage events" menu entry (captains only); a captain-chosen Home team photo
+(photos.is_team_photo, set_team_photo()); `npm run seed-photos` for sample photos on Stags-Dev.
 
 **Done when:** subscribing to the ICS feed on an iPhone shows upcoming matches, and the captain can upload photos from a phone.
 

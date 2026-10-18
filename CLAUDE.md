@@ -50,9 +50,11 @@ npx supabase gen types typescript --linked > src/lib/database.types.ts
 npm run test:rls                              # wraps `supabase db query --linked`; no Docker
 npx supabase db query --linked "select 1"     # ad-hoc SQL against Stags-Dev
 
-# Anonymous REST check: what a logged-out browser can do with the publishable key from .env.local.
-# Member tables return exactly '[]', public_team_summary() works, a pending registration
-# inserts and a self-approved one is refused. Its test registration is deleted via the linked CLI.
+# Anonymous REST + Storage check: what a logged-out browser can do with the publishable key from .env.local.
+# Member tables (incl. events, calendar_tokens) return exactly '[]', public RPCs work, a pending
+# registration inserts and a self-approved one is refused, standings read but never write, and only
+# public photos (rows, bucket listing, signed URLs) are visible. Photo fixtures and the test
+# registration are created and deleted via the linked CLI.
 # Works in Windows PowerShell 5.1 and PowerShell 7; exit code 1 on any failure.
 powershell -ExecutionPolicy Bypass -File scripts/test-anon-access.ps1
 
@@ -61,6 +63,11 @@ powershell -ExecutionPolicy Bypass -File scripts/test-anon-access.ps1
 # auth user if needed. Refuses unless NODE_ENV=development and .env.local is Stags-Dev.
 # Needs the secret key in SUPABASE_SERVICE_ROLE_KEY. Excluded from deploys (.vercelignore).
 npm run dev-login -- player02@example.com
+
+# Dev-only sample photos (seed.sql can't hold files): six "SAMPLE" court images under
+# photos/samples/, private until a captain changes that. Same guards as dev-login; re-running
+# refreshes the files and keeps choices. `-- --remove` deletes them.
+npm run seed-photos
 ```
 
 Secrets live in `.env.local` (git-ignored): project URL, publishable key (in
@@ -69,16 +76,21 @@ Secrets live in `.env.local` (git-ignored): project URL, publishable key (in
 ## Folder layout
 
 ```
-src/app/(public)/      Home, About, Join, Schedule, Results, Contact. No login needed.
-src/app/(member)/      Match Center, Availability, Players, Messages. Requires an active player.
-src/app/(captain)/     Dashboard, roster admin, match/lineup admin, comms. Requires captain/co-captain.
-src/app/api/           Route handlers (email send, RSVP token, cron, ICS feed)
+src/app/(public)/      Home, About, Join, Schedule (agenda/month), Results, Gallery, Contact. No login needed.
+src/app/(member)/      Match Center, Availability, Players, Messages, Photos. Requires an active player.
+src/app/(captain)/     Dashboard, roster admin, match/lineup admin, events, standings, comms. Requires captain/co-captain.
+src/app/api/           Route handlers (email send, RSVP token, cron, ICS feeds: calendar/public.ics, calendar/[token])
 src/components/        UI primitives and screen sections
 src/lib/supabase/      server.ts, client.ts, admin.ts (service role, server only)
 src/lib/auth.ts        requireMember(), requireCaptain(), getCurrentPlayer()
 src/lib/roster/        Roster zod schemas (shared by CSV preview and actions), CSV columns, roster queries
 src/lib/email/         config.ts (env), send.ts (Resend + dev redirect), templates.ts, messages.ts (deliver + log), notify.ts (lineup)
 src/lib/messages/      Compose schema and message history reads
+src/lib/calendar/      CalendarItem shape, member calendar reads, feed URLs, ics.ts (RFC 5545 builder)
+src/lib/events/        Event form schema and captain reads
+src/lib/photos/        Upload schema, signed-URL helper (sign.ts), member gallery reads
+src/lib/standings/     Standings zod schema
+src/lib/public-data.ts Cached public reads (team summary, calendar, results + standings, public/team photos)
 src/app/(public)/r/    One-tap RSVP landing page (/r/[token]?s=...): GET only reads; a server action applies the answer
 supabase/migrations/   SQL migrations (never edit an applied migration; add a new one)
 supabase/tests/        pgTAP tests (rls.sql). Run with `npm run test:rls` (scripts/test-rls.mjs)
@@ -118,6 +130,16 @@ Match `design-reference/`. Those files are the approved look.
 - `checklist_items`: per-match match-day checklist. Members read; only captains add, edit or tick items.
 - `availability` has one row per (match, player): available / maybe / unavailable.
 - `events` covers practices, socials, USTA deadlines and registration windows. Matches are not duplicated here.
+  `is_public` events appear on the public schedule and feed; the rest only for members. Captains manage them at
+  `/captain/events` (also: "Add event" and tappable event cards on Schedule, "Manage events" in the menu).
+- `standings`: the league table, entered by hand per season (rank, team, W, L, lines won/lost, `is_stags`, one per
+  season). Everyone reads (anon too); captains replace it with `save_standings(rows)`.
+- `photos` + the private Storage bucket `photos`: rows hold `path`/`thumb_path`, size, caption, `is_public` and
+  `is_team_photo` (the Home hero; at most one, must be public). Members read all; anon reads only public rows and
+  their files (storage.objects policy joins photos). Only captains write rows or files. Uploads are shrunk in the
+  browser, then re-encoded by sharp on the server (2048px + 640px thumb, no EXIF/GPS). Served via signed URLs.
+- `calendar_tokens`: one secret per player for their personal ICS feed (created by a trigger on `players`). A player
+  reads only their own row; `regenerate_my_calendar_token()` resets it.
 - `registrations` stores public Join-form submissions. Anonymous users can insert, and only captains can read.
 - `messages` + `message_recipients` hold the email history. They are written server-side only (service role).
   `messages.kind` is message / reminder / lineup, `automated` marks cron sends (one automatic reminder per match),
@@ -129,18 +151,22 @@ Match `design-reference/`. Those files are the approved look.
   (player, match), a random uuid, expiring when the match starts; reusable until then so a player can change their answer.
 - Helpers:
   - `is_member()`, `is_captain()` and `current_player_id()`.
-  - RPCs: `set_my_availability`, `set_my_rsvp` (published lineup, match not started), `update_my_profile`, `eligible_players(match_id)`, `public_team_summary()`, `public_schedule()` and
+  - RPCs: `set_my_availability`, `set_my_rsvp` (published lineup, match not started), `update_my_profile`, `eligible_players(match_id)`, `public_team_summary()`,
+    `public_calendar(from, to)` (matches + public events, no addresses or lineups), `public_results()` (current season record,
+    line totals, completed matches, standings; no player names), `regenerate_my_calendar_token()`, `save_standings(rows)`,
+    `set_team_photo(photo_id)` (captain; clears the old one and makes the photo public) and
     `import_players(rows)` (captain CSV upsert by `lower(email)`; blank fields keep values; never sets role) and
     `save_lineup(match_id, slots, publish)` (captain builder: replaces slots in one transaction; first publish sets every
     RSVP to pending, later saves reset only players new to a line; returns the player ids to notify).
-  - Service-role-only RPCs: `issue_rsvp_tokens(match_id, player_ids)`, `peek_rsvp_token(token)` and
+  - Service-role-only RPCs: `issue_rsvp_tokens(match_id, player_ids)`, `peek_rsvp_token(token)`,
+    `calendar_feed(token)` (personal ICS feed; null for an unknown token or inactive player) and
     `apply_rsvp_token(token, answer)` (available / maybe / unavailable → availability; confirmed / declined → lineup RSVP).
   - Views: `player_records`, `match_availability_summary` (active players only; includes `roster_size`).
 
 ## Non-negotiables
 
 1. **Authorization lives in Postgres RLS.** Hiding a button is UX, not security. Every new table gets RLS enabled and explicit policies in the same migration.
-2. **The service role key is server-only.** It is used only in `src/lib/supabase/admin.ts`, and only after `requireCaptain()` passes or a valid `rsvp_token` is verified. Never import admin.ts from a client component.
+2. **The service role key is server-only.** It is used only in `src/lib/supabase/admin.ts`, and only after `requireCaptain()` passes or to call an RPC that verifies a secret token itself (`rsvp_tokens`, `calendar_feed`). Never import admin.ts from a client component.
 3. **Being a member means being on the roster, not having an account.** A signed-in user with no matching active `players` row sees the "Ask your captain to add you" page.
 4. **No mock data in pages.** Pages read from Supabase from Phase 1 onward. Sample data belongs in `supabase/seed.sql`.
 5. **Mobile first.** Build and check every screen at 390px before widening it.
@@ -162,6 +188,9 @@ Match `design-reference/`. Those files are the approved look.
 | Spam on public forms (Join, Contact) | Honeypot field + Cloudflare Turnstile | Outside production, missing keys fall back to Cloudflare's always-pass test keys (`src/lib/spam.ts`). **Real `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` are required before deploy**: production fails closed and the forms refuse submissions without them. |
 | Contact form recipient | `TEAM_INBOX` | Public pages never read `players`, so contact messages don't go to a player address. Not stored in `messages`. |
 | Reminders | Captain button any time; daily cron (`vercel.json`, 13:00 UTC) once per match within 5 days | Non-responders = active players with no availability row |
+| Calendar feeds | `/api/calendar/public.ics` (matches + public events) and `/api/calendar/<token>.ics` (everything, per player) | ICS lengths: match 3h, event without an end 1h, `usta_deadline`/`registration` without an end all-day. Feeds cover 120 days back to 400 days ahead. Tokens reset from the player's profile. |
+| Photos | Member gallery `/photos` (captain uploads and manages inline); public `/gallery` and Home show public photos only | New uploads are private. The captain picks the Home team photo in the gallery (confirm step; it becomes public). Home crops it 16:10 on phones, 4:3 on desktop, focal point 50% 35%. |
+| Standings | Rank, team, W, L, lines won, lines lost, entered by hand | Sorted by the captain's rank; the Stags row is highlighted on Results. |
 
 ## How we work
 
@@ -182,6 +211,9 @@ Match `design-reference/`. Those files are the approved look.
 - [x] Phase 5 — Matches and availability (one-tap availability, live team view and shortages, match create/edit, results updating the record and forecast behavior verified manually; 83 pgTAP assertions + anon REST check pass)
 - [x] Phase 6 — Lineup builder (1 singles + 3 doubles; full lineup under 2 minutes on a phone, ineligible and double-booking flags, publish, and a player decline flagged on the captain view verified manually; 103 pgTAP assertions + anon REST check pass)
 - [x] Phase 7 — Communications (Resend with dev redirect; match-participant audience, one-tap RSVP links updating the tracker without login, tampered links refused, reminders to non-responders only and history verified manually; 120 pgTAP assertions + anon REST check pass)
-- [ ] Phase 8 — Schedule, photos and results
+- [x] Phase 8 — Schedule, photos and results (agenda/month calendar, captain event CRUD reachable from Schedule, menu and
+      Captain area; public + personal ICS feeds validated; photo upload with EXIF/GPS strip verified; captain-chosen Home
+      team photo; results, season stats and standings; checked at 390px by DOM measurement (Chrome screenshots failed);
+      185 pgTAP assertions + anon REST/Storage check pass)
 - [ ] Phase 9 — Captain dashboard and polish
 - [ ] Phase 10 — Deploy (before go-live: real Turnstile keys, verified Resend domain + `EMAIL_MODE=live` on Production only, `CRON_SECRET`, custom SMTP for auth emails)
