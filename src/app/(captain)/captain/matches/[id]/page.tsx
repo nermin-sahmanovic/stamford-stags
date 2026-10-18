@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
+import { RemindNonResponders } from "@/components/captain/remind-non-responders";
 import { ArrowLeftIcon } from "@/components/shell/icons";
 import { Skeleton } from "@/components/ui";
 import { requireCaptain } from "@/lib/auth";
@@ -11,7 +12,7 @@ import { getMatchDetail, getNonResponders } from "@/lib/matches/queries";
 import { updateMatch } from "../actions";
 import { MatchForm } from "../match-form";
 import { ChecklistEditor } from "./checklist-editor";
-import { DeleteMatch, LineupPublish, RemindNonResponders } from "./match-tools";
+import { DeleteMatch, LineupPublish } from "./match-tools";
 import { ResultsForm } from "./results-form";
 
 export const metadata: Metadata = { title: "Edit match" };

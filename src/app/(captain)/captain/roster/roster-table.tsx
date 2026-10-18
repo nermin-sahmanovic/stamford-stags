@@ -77,7 +77,7 @@ export function RosterTable({ players, myId }: { players: RosterPlayer[]; myId: 
 
       <label className="relative block">
         <span className="sr-only">Search by name or email</span>
-        <SearchIcon size={18} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-slate-500" />
+        <SearchIcon size={18} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-slate-600" />
         <input
           type="search"
           value={query}
@@ -136,7 +136,7 @@ export function RosterTable({ players, myId }: { players: RosterPlayer[]; myId: 
                 <Link
                   href={`/captain/roster/${p.id}/edit`}
                   aria-label={`Edit ${p.full_name}`}
-                  className="flex h-10 shrink-0 items-center rounded-[10px] bg-navy px-3.5 text-[14px] font-bold text-white no-underline hover:bg-navy-2 hover:text-white"
+                  className="flex h-11 shrink-0 items-center rounded-[10px] bg-navy px-3.5 text-[14px] font-bold text-white no-underline hover:bg-navy-2 hover:text-white"
                 >
                   Edit
                 </Link>
@@ -157,7 +157,7 @@ export function RosterTable({ players, myId }: { players: RosterPlayer[]; myId: 
             <button
               type="button"
               onClick={() => setSelected(new Set())}
-              className="h-9 px-2 text-[14px] font-semibold text-slate-300 hover:text-white"
+              className="h-11 px-2 text-[14px] font-semibold text-slate-300 hover:text-white"
             >
               Clear
             </button>

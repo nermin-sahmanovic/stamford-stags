@@ -935,6 +935,10 @@ export type Database = {
           outcome: string
         }[]
       }
+      invite_registration: {
+        Args: { p_registration_id: string }
+        Returns: string
+      }
       is_captain: { Args: never; Returns: boolean }
       is_member: { Args: never; Returns: boolean }
       issue_rsvp_tokens: {

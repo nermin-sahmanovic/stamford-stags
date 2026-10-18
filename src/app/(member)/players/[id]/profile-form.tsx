@@ -81,7 +81,7 @@ export function ProfileForm({ phone, position }: { phone: string; position: stri
           </span>
         ) : null}
       </div>
-      <p className="text-[13px] text-slate-500">
+      <p className="text-[13px] text-slate-600">
         Your name, email and rating are managed by the captain.
       </p>
     </form>

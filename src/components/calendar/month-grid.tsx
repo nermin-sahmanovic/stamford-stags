@@ -35,7 +35,7 @@ export function MonthGrid({ monthKey, todayKey, items }: { monthKey: string; tod
       <div className="rounded-[14px] border border-line bg-white p-2.5">
         <div className="grid grid-cols-7 text-center" aria-hidden="true">
           {WEEKDAYS.map(([letter, name]) => (
-            <span key={name} className="py-1 text-[12px] font-bold tracking-[0.06em] text-slate-500">
+            <span key={name} className="py-1 text-[12px] font-bold tracking-[0.06em] text-slate-600">
               {letter}
             </span>
           ))}
@@ -83,7 +83,7 @@ export function MonthGrid({ monthKey, todayKey, items }: { monthKey: string; tod
 
       <section aria-live="polite" aria-label="Selected day">
         <div className="mb-2 flex min-h-11 items-center justify-between gap-3">
-          <h2 className="text-[13px] font-bold tracking-[0.08em] text-slate-500 uppercase">
+          <h2 className="text-[13px] font-bold tracking-[0.08em] text-slate-600 uppercase">
             {selected ? formatWeekdayDate(noonUtc(selected)) : `All of ${formatMonthYear(noonUtc(`${monthKey}-15`))}`}
           </h2>
           {selected ? (

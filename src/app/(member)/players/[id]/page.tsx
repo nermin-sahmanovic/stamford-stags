@@ -146,7 +146,7 @@ function ContactRow({
         {icon}
       </span>
       <span className="min-w-0">
-        <span className="block text-[12px] font-semibold tracking-[0.06em] text-slate-500 uppercase">
+        <span className="block text-[12px] font-semibold tracking-[0.06em] text-slate-600 uppercase">
           {label}
         </span>
         <span className="block truncate text-[15px] font-semibold">{value}</span>

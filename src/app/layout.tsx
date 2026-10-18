@@ -5,24 +5,29 @@ import "./globals.css";
 
 const barlow = Barlow({
   variable: "--font-barlow",
-  weight: ["400", "500", "600", "700"],
+  // 500 (font-medium, a handful of chips) falls back to 400: one less font file to preload.
+  weight: ["400", "600", "700"],
   subsets: ["latin"],
   display: "swap",
 });
 
 const barlowCondensed = Barlow_Condensed({
   variable: "--font-barlow-condensed",
-  weight: ["600", "700"],
+  weight: ["700"],
   subsets: ["latin"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3000"),
   title: {
     default: "Stamford Stags",
     template: "%s · Stamford Stags",
   },
   description: "USTA adult league tennis team in Stamford, CT.",
+  applicationName: "Stamford Stags",
+  // Home-screen web app on iPhone: opens full screen with "Stags" under the icon.
+  appleWebApp: { capable: true, title: "Stags", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

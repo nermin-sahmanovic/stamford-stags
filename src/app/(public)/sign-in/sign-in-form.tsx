@@ -6,7 +6,7 @@ import { sendMagicLink, type SignInState } from "./actions";
 
 const initialState: SignInState = { status: "idle" };
 
-export function SignInForm({ next }: { next?: string }) {
+export function SignInForm({ next, email }: { next?: string; email?: string }) {
   const [state, formAction, pending] = useActionState(sendMagicLink, initialState);
 
   if (state.status === "sent") {
@@ -45,10 +45,10 @@ export function SignInForm({ next }: { next?: string }) {
         spellCheck={false}
         required
         placeholder="you@example.com"
-        defaultValue={hasError ? state.email : undefined}
+        defaultValue={hasError ? state.email : email}
         aria-invalid={hasError || undefined}
         aria-describedby={hasError ? errorId : undefined}
-        className="mt-1.5 h-12 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-base text-navy placeholder:text-slate-400 focus:border-court focus:outline-2 focus:outline-offset-0 focus:outline-court/30"
+        className="mt-1.5 h-12 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-base text-navy placeholder:text-slate-500 focus:border-court focus:outline-2 focus:outline-offset-0 focus:outline-court/30"
       />
       {hasError ? (
         <p id={errorId} role="alert" className="mt-2 text-[14px] font-semibold text-warn">

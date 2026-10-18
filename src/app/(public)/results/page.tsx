@@ -72,7 +72,7 @@ function Standings({ results }: { results: PublicResults }) {
           <table className="w-full text-[15px]">
             <caption className="sr-only">League standings: team match wins and losses, then individual lines won and lost</caption>
             <thead>
-              <tr className="border-b border-line text-left text-[12px] font-semibold tracking-[0.06em] text-slate-500 uppercase">
+              <tr className="border-b border-line text-left text-[12px] font-semibold tracking-[0.06em] text-slate-600 uppercase">
                 <th scope="col" className="w-10 py-2 pl-3.5">#</th>
                 <th scope="col" className="py-2">Team</th>
                 <th scope="col" className="w-9 py-2 text-right">W</th>
@@ -122,7 +122,7 @@ function RecentResults({ matches }: { matches: PublicResults["matches"] }) {
             return (
               <li key={match.id} className="flex items-center gap-3 rounded-[14px] border border-line bg-white p-3.5">
                 <div className="w-12 shrink-0 text-center">
-                  <span className="block text-[12px] font-bold tracking-[0.08em] text-slate-500 uppercase">
+                  <span className="block text-[12px] font-bold tracking-[0.08em] text-slate-600 uppercase">
                     {formatWeekday(match.starts_at)}
                   </span>
                   <span className="block text-[14px] font-semibold">{formatShortDate(match.starts_at)}</span>
@@ -141,7 +141,7 @@ function RecentResults({ matches }: { matches: PublicResults["matches"] }) {
                     {result.score}
                   </span>
                 ) : (
-                  <span className="shrink-0 text-[13px] text-slate-500">No score</span>
+                  <span className="shrink-0 text-[13px] text-slate-600">No score</span>
                 )}
               </li>
             );

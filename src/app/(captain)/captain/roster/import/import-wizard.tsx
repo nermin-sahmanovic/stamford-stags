@@ -245,7 +245,7 @@ function Preview({
         <ul className="max-h-[360px] overflow-y-auto rounded-[12px] border border-line">
           {valid.map(({ rowNumber, data }) => (
             <li key={rowNumber} className="flex items-center gap-2.5 border-b border-[#EEF2F6] px-3 py-2.5 last:border-b-0">
-              <span className="w-12 shrink-0 text-[12px] font-semibold text-slate-500">Row {rowNumber}</span>
+              <span className="w-12 shrink-0 text-[12px] font-semibold text-slate-600">Row {rowNumber}</span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[14px] font-bold">{data.full_name}</span>
                 <span className="block truncate text-[13px] text-slate-600">
@@ -358,7 +358,7 @@ function StepCard({ number, title, children }: { number: number; title: string; 
 function MiniStat({ label, value, warn = false }: { label: string; value: number; warn?: boolean }) {
   return (
     <div className={`rounded-[12px] border p-2.5 ${warn ? "border-warn/40 bg-warn-bg" : "border-line"}`}>
-      <div className="text-[12px] font-semibold tracking-[0.06em] text-slate-500 uppercase">{label}</div>
+      <div className="text-[12px] font-semibold tracking-[0.06em] text-slate-600 uppercase">{label}</div>
       <div className={`font-display text-[28px] leading-none font-bold ${warn ? "text-warn" : ""}`}>{value}</div>
     </div>
   );

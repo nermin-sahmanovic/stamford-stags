@@ -21,7 +21,7 @@ export function MatchRow({ match, href, meta, alert }: { match: Match; href: str
       className="flex min-h-[72px] items-center gap-3.5 rounded-[14px] border border-line bg-white px-3.5 py-3 text-navy no-underline hover:border-slate-300"
     >
       <div className="w-12 shrink-0 text-center">
-        <div className="text-[11px] font-bold tracking-[0.06em] text-slate-500 uppercase">
+        <div className="text-[11px] font-bold tracking-[0.06em] text-slate-600 uppercase">
           {formatMonthShort(match.startsAt)}
         </div>
         <div className="font-display text-[28px] leading-none font-bold">{formatDayOfMonth(match.startsAt)}</div>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Skeleton } from "@/components/ui";
+import { PlayersIcon } from "@/components/shell/icons";
+import { EmptyState, Skeleton } from "@/components/ui";
 import { getDirectory } from "@/lib/roster/queries";
 import { PlayersDirectory } from "./players-directory";
 
@@ -26,7 +27,13 @@ async function Directory() {
       <p className="mt-0.5 mb-4 text-[15px] text-slate-600">
         {players.length} on the active roster. Tap a player for contact details.
       </p>
-      <PlayersDirectory players={players} nextMatch={nextMatch} />
+      {players.length === 0 ? (
+        <EmptyState icon={PlayersIcon} title="No players yet">
+          The captain adds the roster, one player at a time or from a spreadsheet.
+        </EmptyState>
+      ) : (
+        <PlayersDirectory players={players} nextMatch={nextMatch} />
+      )}
     </>
   );
 }

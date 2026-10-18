@@ -5,11 +5,12 @@ import { CourtLinesFull } from "@/components/court-lines";
 import {
   ArrowRightIcon,
   CameraIcon,
+  InfoIcon,
   ClockIcon,
   MailIcon,
   PinIcon,
 } from "@/components/shell/icons";
-import { Pill, SectionHeading, Skeleton, StatCard, type PillTone } from "@/components/ui";
+import { EmptyState, Pill, SectionHeading, Skeleton, StatCard, type PillTone } from "@/components/ui";
 import { formatShortDate, formatTime, formatWeekday, formatWeekdayDate } from "@/lib/format";
 import { getPublicNews, getPublicPhotos, getTeamPhoto, getTeamSummary, type NewsPost } from "@/lib/public-data";
 
@@ -18,9 +19,9 @@ export default function HomePage() {
     <>
       <Hero />
       <div className="mx-auto max-w-5xl">
-        <Suspense fallback={<StatsSkeleton />}>
-          <Stats />
-        </Suspense>
+        {/* Above the fold and cached ("use cache"), so no Suspense: they're part of the prerendered
+            shell and paint with the first HTML instead of being streamed in and swapped by script. */}
+        <Stats />
         <div className="md:grid md:grid-cols-2 md:gap-2">
           <Suspense fallback={<div className="px-4 py-2"><Skeleton className="h-[172px]" /></div>}>
             <NextMatch />
@@ -47,9 +48,7 @@ function Hero() {
           <div className="flex items-center gap-2 self-start rounded-full bg-ball/15 px-3 py-1.5 text-[12px] font-semibold tracking-[0.08em] text-ball uppercase">
             <span className="size-1.5 rounded-full bg-ball" />
             USTA Adult League
-            <Suspense fallback={null}>
-              <SeasonName />
-            </Suspense>
+            <SeasonName />
           </div>
           <h1 className="font-display text-[60px] leading-[0.9] font-bold tracking-[0.01em] text-white uppercase">
             Stamford
@@ -62,9 +61,7 @@ function Hero() {
           </p>
         </div>
         <div className="flex flex-col gap-4">
-          <Suspense fallback={<PhotoPlaceholder />}>
-            <HeroPhoto />
-          </Suspense>
+          <HeroPhoto />
           <div className="flex flex-col gap-2.5">
             <Link
               href="/join"
@@ -110,12 +107,13 @@ async function HeroPhoto() {
       href="/gallery"
       className="block aspect-[16/10] overflow-hidden rounded-[14px] bg-navy-2 md:aspect-[4/3]"
     >
+      {/* Optimized by next/image: sized to the hero slot instead of the 2048px original (it's the LCP). */}
       <Image
         src={photo.fullUrl}
         alt={photo.caption ?? "Stamford Stags team photo"}
         width={photo.width}
         height={photo.height}
-        unoptimized
+        sizes="(min-width: 768px) 496px, calc(100vw - 40px)"
         priority
         className="size-full object-cover object-[50%_35%]"
       />
@@ -193,16 +191,6 @@ async function Stats() {
   );
 }
 
-function StatsSkeleton() {
-  return (
-    <div className="grid grid-cols-2 gap-2.5 px-4 pt-5 pb-2 md:grid-cols-4">
-      {[0, 1, 2, 3].map((i) => (
-        <Skeleton key={i} className="h-[106px]" />
-      ))}
-    </div>
-  );
-}
-
 async function NextMatch() {
   const { next_match: next } = await getTeamSummary();
   if (!next) return null;
@@ -257,7 +245,9 @@ async function Latest() {
         <SectionHeading id="latest-heading">Latest</SectionHeading>
       </div>
       {posts.length === 0 ? (
-        <p className="text-[15px] text-slate-600">No news yet. Check back after the next match.</p>
+        <EmptyState icon={InfoIcon} title="No news yet">
+          Results and announcements appear here after each match.
+        </EmptyState>
       ) : (
         <div className="flex flex-col gap-2.5">
           {posts.map((post) => (
@@ -303,7 +293,7 @@ function ContactCard() {
           Message the captain
         </Link>
       </div>
-      <p className="mt-4 text-center text-[12px] text-slate-500">USTA League team · Stamford, CT</p>
+      <p className="mt-4 text-center text-[12px] text-slate-600">USTA League team · Stamford, CT</p>
     </section>
   );
 }

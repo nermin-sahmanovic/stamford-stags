@@ -1,3 +1,5 @@
 # Dev-only tooling; never deployed.
 scripts/dev-login.ts
 scripts/seed-photos.ts
+scripts/lighthouse.sh
+scripts/lighthouse-chrome.ps1

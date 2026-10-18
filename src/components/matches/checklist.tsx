@@ -16,7 +16,7 @@ function Box({ done }: { done: boolean }) {
 }
 
 const labelClass = (done: boolean) =>
-  done ? "text-[15px] text-slate-500 line-through" : "text-[15px] font-medium text-navy";
+  done ? "text-[15px] text-slate-600 line-through" : "text-[15px] font-medium text-navy";
 
 /** Match-day checklist. Captains tick items (optimistic); everyone else sees progress read-only. */
 export function Checklist({ items, canEdit }: { items: ChecklistItem[]; canEdit: boolean }) {

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { Suspense } from "react";
 import { GalleryGrid } from "@/components/photos/gallery-grid";
-import { Skeleton } from "@/components/ui";
+import { CameraIcon } from "@/components/shell/icons";
+import { EmptyState, Skeleton } from "@/components/ui";
 import { requireMember } from "@/lib/auth";
 import { getMemberPhotos, getPhotoMatchOptions } from "@/lib/photos/queries";
 import type { GalleryPhoto } from "@/lib/photos/sign";
@@ -35,9 +36,11 @@ async function Photos() {
             : "Team photos from matches and events. Only photos the captain makes public appear on the public site."}
         </p>
         {photos.length === 0 ? (
-          <p className="rounded-[14px] border border-line bg-white p-4 text-[15px] text-slate-600">
-            No photos yet.{me.isCaptain ? " Add the first ones from match day." : ""}
-          </p>
+          <EmptyState icon={CameraIcon} title="No photos yet">
+            {me.isCaptain
+              ? "Add the first ones from match day with Add photos. They stay private until you make them public."
+              : "Photos from matches and socials will show up here once the captain adds them."}
+          </EmptyState>
         ) : (
           <GalleryGrid
             photos={photos}

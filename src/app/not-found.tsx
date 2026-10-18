@@ -1,17 +1,29 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { StatusPage, statusPrimary, statusSecondary } from "@/components/status-page";
+
+export const metadata: Metadata = { title: "Page not found" };
 
 export default function NotFound() {
   return (
-    <section className="mx-auto max-w-5xl px-4 pt-4 pb-6">
-      <h1 className="font-display text-[28px] leading-tight font-bold tracking-[0.02em] uppercase">
-        Page not found
-      </h1>
-      <p className="mt-0.5 text-[15px] text-slate-600">
-        That page doesn&apos;t exist.{" "}
-        <Link href="/" className="font-semibold text-court hover:text-blue-700">
-          Back to home
-        </Link>
-      </p>
-    </section>
+    <StatusPage
+      code="404"
+      title="Out of bounds"
+      actions={
+        <>
+          <Link href="/" className={statusPrimary}>
+            Back to home
+          </Link>
+          <Link href="/schedule" className={statusSecondary}>
+            Schedule
+          </Link>
+          <Link href="/matches" className={statusSecondary}>
+            Match Center
+          </Link>
+        </>
+      }
+    >
+      That page doesn&apos;t exist, or it moved. Check the link, or pick up from one of these.
+    </StatusPage>
   );
 }

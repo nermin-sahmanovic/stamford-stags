@@ -155,7 +155,7 @@ export function PhotoUploader({ matches }: { matches: MatchOption[] }) {
                 ) : item.state === "uploading" ? (
                   "Uploading…"
                 ) : (
-                  <span className="text-slate-500">Waiting</span>
+                  <span className="text-slate-600">Waiting</span>
                 )}
               </span>
               <span className="min-w-0 flex-1">

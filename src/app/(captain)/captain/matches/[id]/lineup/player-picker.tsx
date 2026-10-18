@@ -92,7 +92,7 @@ export function PlayerPicker({
                       >
                         <span className="min-w-0 flex-1">
                           <span
-                            className={`block truncate text-[16px] font-semibold ${elsewhere ? "text-slate-500" : ""}`}
+                            className={`block truncate text-[16px] font-semibold ${elsewhere ? "text-slate-600" : ""}`}
                           >
                             {c.name}
                           </span>

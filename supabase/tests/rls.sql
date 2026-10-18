@@ -13,7 +13,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(185);
+select plan(195);
 
 -------------------------------------------------------------------------------
 -- Fixtures (as postgres)
@@ -668,7 +668,8 @@ select throws_ok($$select calendar_feed('cccccccc-0000-0000-0000-000000000005')$
 select throws_ok($$select set_team_photo('dddddddd-0000-0000-0000-000000000001')$$, '42501', null,
   'player: cannot choose the Home team photo');
 update photos set is_team_photo = true where id = 'dddddddd-0000-0000-0000-000000000001';
-select ok(not exists (select 1 from photos where is_team_photo), 'player: cannot flag a team photo directly');
+select ok(not (select is_team_photo from photos where id = 'dddddddd-0000-0000-0000-000000000001'),
+  'player: cannot flag a team photo directly');
 
 -- CAPTAIN
 reset role;
@@ -749,6 +750,60 @@ select is(
 select is(calendar_feed('cccccccc-0000-0000-0000-000000000003'), null, 'calendar feed: a reset (old) token returns nothing');
 select is(calendar_feed('cccccccc-0000-0000-0000-000000000005'), null, 'calendar feed: an inactive player''s token returns nothing');
 select is(calendar_feed('cccccccc-0000-0000-0000-0000000000ff'), null, 'calendar feed: an unknown token returns nothing');
+
+-------------------------------------------------------------------------------
+-- PHASE 9: invite a Join-form registration (invite_registration) and the 'invite' message kind
+--   Fixtures: two pending registrations, one new person and one whose email (any case) is
+--   already on the roster as P05.
+-------------------------------------------------------------------------------
+reset role;
+insert into public.registrations (id, full_name, email, phone, ntrp_rating, position_pref) values
+  ('ffffffff-0000-0000-0000-000000000001', 'Rita Newcomer', 'Rita.Newcomer@rls-test.invalid', '(203) 555-0999', 3.5, 'singles'),
+  ('ffffffff-0000-0000-0000-000000000002', 'Already Here', 'PLAYER05@example.com', null, null, 'both');
+
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claims', '', true);
+set local role anon;
+select throws_ok($$select invite_registration('ffffffff-0000-0000-0000-000000000001')$$, '42501', null,
+  'anon: cannot invite a registration');
+
+reset role;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-0000-0000-000000000a03', true);
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000a03","role":"authenticated"}', true);
+set local role authenticated;
+select throws_ok($$select invite_registration('ffffffff-0000-0000-0000-000000000001')$$, '42501', null,
+  'player: cannot invite a registration');
+
+reset role;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-0000-0000-000000000a01', true);
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000a01","role":"authenticated"}', true);
+set local role authenticated;
+select ok(invite_registration('ffffffff-0000-0000-0000-000000000001') is not null, 'captain: can invite a registration');
+select is(
+  (select full_name || ' ' || email || ' ' || role || ' ' || position_pref || ' ' || ntrp_rating || ' ' || phone
+     from players where lower(email) = 'rita.newcomer@rls-test.invalid'),
+  'Rita Newcomer rita.newcomer@rls-test.invalid player singles 3.5 (203) 555-0999',
+  'captain: the invite adds the player from the registration (as a player)');
+select is(
+  (select status || ' ' || (player_id is not null) || ' ' || (reviewed_by = '11111111-0000-0000-0000-000000000001') || ' ' || (reviewed_at is not null)
+     from registrations where id = 'ffffffff-0000-0000-0000-000000000001'),
+  'invited true true true', 'captain: the registration is marked invited, linked and reviewed');
+select throws_ok($$select invite_registration('ffffffff-0000-0000-0000-000000000001')$$, 'P0002', null,
+  'captain: the same registration cannot be invited twice');
+select is(
+  invite_registration('ffffffff-0000-0000-0000-000000000002'),
+  '11111111-0000-0000-0000-000000000005'::uuid, 'captain: an email already on the roster links to that player');
+select is((select count(*)::int from players where lower(email) = 'player05@example.com'), 1,
+  'captain: inviting an existing email creates no duplicate player');
+
+reset role;
+set local role service_role;
+select lives_ok(
+  $$insert into messages (audience, kind, subject, body) values ('custom', 'invite', 'Welcome', 'Hi')$$,
+  'messages: the invite kind is allowed');
+select throws_ok(
+  $$insert into messages (audience, kind, subject, body) values ('custom', 'spam', 'Nope', 'Hi')$$,
+  '23514', null, 'messages: unknown kinds are still refused');
 
 -------------------------------------------------------------------------------
 reset role;

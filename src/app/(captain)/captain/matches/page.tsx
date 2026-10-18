@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { MatchRow } from "@/components/matches/match-row";
-import { PlusIcon } from "@/components/shell/icons";
-import { SectionHeading, Skeleton } from "@/components/ui";
+import { MatchesIcon, PlusIcon } from "@/components/shell/icons";
+import { EmptyState, SectionHeading, Skeleton } from "@/components/ui";
 import { requireCaptain } from "@/lib/auth";
 import { formatTime } from "@/lib/format";
 import { homeAwayLabel } from "@/lib/matches/display";
@@ -45,8 +45,13 @@ async function MatchList() {
   await requireCaptain();
   const { upcoming, past } = await getCaptainMatches();
   const groups = [
-    { title: "Upcoming", id: "upcoming", matches: upcoming, empty: "No upcoming matches. Add one to get started." },
-    { title: "Past", id: "past", matches: past, empty: "No past matches yet." },
+    {
+      title: "Upcoming",
+      id: "upcoming",
+      matches: upcoming,
+      empty: { title: "No matches yet", body: "Add the season's matches as soon as the league releases the schedule.", action: { href: "/captain/matches/new", label: "Create a match" } },
+    },
+    { title: "Past", id: "past", matches: past, empty: { title: "No past matches yet", body: "Played matches and their results collect here." } },
   ];
   return (
     <>
@@ -54,9 +59,11 @@ async function MatchList() {
         <section key={group.id} aria-labelledby={`${group.id}-heading`} className="mt-1">
           <SectionHeading id={`${group.id}-heading`}>{group.title}</SectionHeading>
           {group.matches.length === 0 ? (
-            <p className="mt-2 rounded-[14px] border border-line bg-white p-4 text-[15px] text-slate-600">
-              {group.empty}
-            </p>
+            <div className="mt-2">
+              <EmptyState icon={MatchesIcon} title={group.empty.title} action={"action" in group.empty ? group.empty.action : undefined}>
+                {group.empty.body}
+              </EmptyState>
+            </div>
           ) : (
             <ul className="mt-2 grid gap-2.5 md:grid-cols-2">
               {group.matches.map((match) => (

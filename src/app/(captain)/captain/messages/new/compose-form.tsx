@@ -170,7 +170,7 @@ export function ComposeForm({
               {audience === "match" ? "Choose a match with a lineup." : "Nobody yet."}
             </p>
           )}
-          <p className="mt-2 text-[12px] text-slate-500">One email per player. Nobody sees anyone else&apos;s address.</p>
+          <p className="mt-2 text-[12px] text-slate-600">One email per player. Nobody sees anyone else&apos;s address.</p>
         </section>
       </div>
 

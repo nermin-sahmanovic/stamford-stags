@@ -41,6 +41,7 @@ export function MenuDrawer({ showCaptain = false, signedIn = false, account = nu
   const panelId = useId();
   const openButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -53,7 +54,23 @@ export function MenuDrawer({ showCaptain = false, signedIn = false, account = nu
     const { overflow } = document.body.style;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
+      if (e.key === "Escape") return close();
+      if (e.key !== "Tab") return;
+      // Keep Tab and Shift+Tab inside the open drawer (it's a modal dialog).
+      const focusable = panelRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable || focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const inside = panelRef.current?.contains(document.activeElement);
+      if (e.shiftKey && (document.activeElement === first || !inside)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (document.activeElement === last || !inside)) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKey);
     return () => {
@@ -103,6 +120,7 @@ export function MenuDrawer({ showCaptain = false, signedIn = false, account = nu
       />
 
       <div
+        ref={panelRef}
         id={panelId}
         role="dialog"
         aria-modal="true"

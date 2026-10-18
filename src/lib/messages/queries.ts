@@ -20,7 +20,7 @@ export const STATUS_LABELS: Record<MessageStatus, string> = {
   partial: "Some failed",
   failed: "Failed",
 };
-export type MessageKind = "message" | "reminder" | "lineup";
+export type MessageKind = "message" | "reminder" | "lineup" | "invite";
 
 export { AUDIENCE_LABELS };
 
@@ -28,6 +28,7 @@ export const KIND_LABELS: Record<MessageKind, string> = {
   message: "Message",
   reminder: "Reminder",
   lineup: "Lineup",
+  invite: "Invite",
 };
 
 const LIST_COLUMNS =

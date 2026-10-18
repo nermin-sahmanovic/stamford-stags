@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { z } from "zod";
 import { safeNextPath } from "@/lib/routes";
 import { SignInForm } from "./sign-in-form";
 
@@ -25,6 +26,8 @@ async function SignInBody({ searchParams }: Pick<PageProps<"/sign-in">, "searchP
   const params = await searchParams;
   const next = safeNextPath(params.next) ?? undefined;
   const linkFailed = params.error === "link";
+  // Invite emails link here with the address filled in.
+  const email = z.email().max(254).safeParse(typeof params.email === "string" ? params.email.trim() : "");
 
   return (
     <>
@@ -36,7 +39,7 @@ async function SignInBody({ searchParams }: Pick<PageProps<"/sign-in">, "searchP
           That sign-in link has expired or was already used. Send yourself a new one.
         </p>
       ) : null}
-      <SignInForm next={next} />
+      <SignInForm next={next} email={email.success ? email.data : undefined} />
     </>
   );
 }

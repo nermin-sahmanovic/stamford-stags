@@ -82,7 +82,7 @@ async function Message({ params }: { params: Promise<{ id: string }> }) {
               </span>
               <span
                 className={`shrink-0 text-right text-[13px] font-bold ${
-                  r.status === "sent" ? "text-blue-700" : r.status === "queued" ? "text-slate-500" : "text-warn"
+                  r.status === "sent" ? "text-blue-700" : r.status === "queued" ? "text-slate-600" : "text-warn"
                 }`}
               >
                 {r.status === "queued" ? STATUS_LABELS.queued : STATUS_LABELS[r.status]}

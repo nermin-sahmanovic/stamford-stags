@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense, type ReactNode } from "react";
+import { Suspense } from "react";
 import { MatchDetail } from "@/components/matches/match-detail";
 import { MatchRow } from "@/components/matches/match-row";
-import { PlusIcon } from "@/components/shell/icons";
-import { SectionHeading, Skeleton } from "@/components/ui";
+import { MatchesIcon, PlusIcon, ResultsIcon } from "@/components/shell/icons";
+import { EmptyState, SectionHeading, Skeleton } from "@/components/ui";
 import { requireMember } from "@/lib/auth";
 import { getMatchCenter, getMatchDetail } from "@/lib/matches/queries";
 
@@ -59,7 +59,7 @@ async function MatchCenter({ searchParams }: { searchParams: Promise<{ tab?: str
             href={value === "upcoming" ? "/matches" : "/matches?tab=results"}
             aria-current={tab === value ? "page" : undefined}
             scroll={false}
-            className={`flex h-10 items-center justify-center rounded-[9px] text-[14px] no-underline ${
+            className={`flex h-11 items-center justify-center rounded-[9px] text-[14px] no-underline ${
               tab === value ? "bg-white font-bold text-navy" : "font-semibold text-slate-600 hover:text-navy"
             }`}
           >
@@ -83,7 +83,17 @@ async function Upcoming({
   isCaptain: boolean;
 }) {
   if (upcoming.length === 0) {
-    return <Empty>No upcoming matches yet.</Empty>;
+    return (
+      <div className="mt-3.5">
+        <EmptyState
+          icon={MatchesIcon}
+          title="No matches yet"
+          action={isCaptain ? { href: "/captain/matches/new", label: "Create a match" } : undefined}
+        >
+          The captain adds matches once the league releases the schedule. Check back soon.
+        </EmptyState>
+      </div>
+    );
   }
   const [next, ...later] = upcoming;
   const detail = await getMatchDetail(next.id);
@@ -110,7 +120,15 @@ async function Upcoming({
 }
 
 function Results({ results }: { results: Awaited<ReturnType<typeof getMatchCenter>>["results"] }) {
-  if (results.length === 0) return <Empty>No results yet.</Empty>;
+  if (results.length === 0) {
+    return (
+      <div className="mt-3.5">
+        <EmptyState icon={ResultsIcon} title="No results yet">
+          Scores show up here after each match is played.
+        </EmptyState>
+      </div>
+    );
+  }
   return (
     <ul className="mt-3.5 grid gap-2.5 md:grid-cols-2">
       {results.map((match) => (
@@ -122,11 +140,6 @@ function Results({ results }: { results: Awaited<ReturnType<typeof getMatchCente
   );
 }
 
-function Empty({ children }: { children: ReactNode }) {
-  return (
-    <p className="mt-3.5 rounded-[14px] border border-line bg-white p-4 text-[15px] text-slate-600">{children}</p>
-  );
-}
 
 function CenterSkeleton() {
   return (

@@ -189,6 +189,9 @@ try {
   $r = Invoke-Anon -Method POST -Path 'rpc/save_standings' -Body '{"p_rows":[]}'
   Report (Test-Refused $r) 'anon cannot call save_standings()' "HTTP $($r.Status): $($r.Content)"
 
+  $r = Invoke-Anon -Method POST -Path 'rpc/invite_registration' -Body '{"p_registration_id":"00000000-0000-0000-0000-000000000000"}'
+  Report (Test-Refused $r) 'anon cannot invite a registration onto the roster' "HTTP $($r.Status): $($r.Content)"
+
   # 5. Photos table: only rows the captain marked public.
   $r = Invoke-Anon -Method GET -Path "photos?select=path&path=like.$prefix*"
   Report ($r.Status -eq 200 -and $r.Content -match [regex]::Escape($publicPath) -and $r.Content -notmatch 'private') `

@@ -169,7 +169,7 @@ export function JoinForm({ siteKey }: { siteKey: string }) {
         <label className="flex flex-col gap-1.5 text-[14px] font-semibold">
           <span>
             Notes{" "}
-            <span className="text-[13px] font-normal text-slate-500">Anything the captain should know</span>
+            <span className="text-[13px] font-normal text-slate-600">Anything the captain should know</span>
           </span>
           <textarea
             name="notes"
@@ -194,7 +194,7 @@ export function JoinForm({ siteKey }: { siteKey: string }) {
           {pending ? "Sending…" : "Apply to Join"}
           <ArrowRightIcon size={18} />
         </button>
-        <p className="text-center text-[12px] text-slate-500">
+        <p className="text-center text-[12px] text-slate-600">
           Your details are only visible to the team captain.
         </p>
       </form>

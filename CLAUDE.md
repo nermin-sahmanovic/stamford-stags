@@ -68,6 +68,12 @@ npm run dev-login -- player02@example.com
 # photos/samples/, private until a captain changes that. Same guards as dev-login; re-running
 # refreshes the files and keeps choices. `-- --remove` deletes them.
 npm run seed-photos
+
+# Lighthouse (mobile, median of 5 fresh-Chrome runs) against a PRODUCTION build only. Stop `npm run dev`
+# first and delete .next (see the reload-loop note), then `npm run build && npm start`. With a player email
+# the script signs in via dev-login and measures as that player. Reports land in .lighthouse/ (ignored).
+bash scripts/lighthouse.sh home http://localhost:3000/
+bash scripts/lighthouse.sh matches http://localhost:3000/matches player03@example.com
 ```
 
 Secrets live in `.env.local` (git-ignored): project URL, publishable key (in
@@ -142,7 +148,7 @@ Match `design-reference/`. Those files are the approved look.
   reads only their own row; `regenerate_my_calendar_token()` resets it.
 - `registrations` stores public Join-form submissions. Anonymous users can insert, and only captains can read.
 - `messages` + `message_recipients` hold the email history. They are written server-side only (service role).
-  `messages.kind` is message / reminder / lineup, `automated` marks cron sends (one automatic reminder per match),
+  `messages.kind` is message / reminder / lineup / invite, `automated` marks cron sends (one automatic reminder per match),
   `delivery` is live / redirect / log, and `status` is queued / sent / logged / partial / failed. "logged" means log mode
   (no `RESEND_API_KEY` or `EMAIL_DEV_REDIRECT`): never sent, shown as "Logged (not sent)". Each recipient row has its own
   `status` (queued / sent / logged / failed), `error` and `provider_message_id`.
@@ -154,7 +160,9 @@ Match `design-reference/`. Those files are the approved look.
   - RPCs: `set_my_availability`, `set_my_rsvp` (published lineup, match not started), `update_my_profile`, `eligible_players(match_id)`, `public_team_summary()`,
     `public_calendar(from, to)` (matches + public events, no addresses or lineups), `public_results()` (current season record,
     line totals, completed matches, standings; no player names), `regenerate_my_calendar_token()`, `save_standings(rows)`,
-    `set_team_photo(photo_id)` (captain; clears the old one and makes the photo public) and
+    `set_team_photo(photo_id)` (captain; clears the old one and makes the photo public),
+    `invite_registration(registration_id)` (captain; adds the player from a pending Join-form registration, or links
+    the existing player with that email, and marks it invited; never sets a role) and
     `import_players(rows)` (captain CSV upsert by `lower(email)`; blank fields keep values; never sets role) and
     `save_lineup(match_id, slots, publish)` (captain builder: replaces slots in one transaction; first publish sets every
     RSVP to pending, later saves reset only players new to a line; returns the player ids to notify).
@@ -188,6 +196,8 @@ Match `design-reference/`. Those files are the approved look.
 | Spam on public forms (Join, Contact) | Honeypot field + Cloudflare Turnstile | Outside production, missing keys fall back to Cloudflare's always-pass test keys (`src/lib/spam.ts`). **Real `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` are required before deploy**: production fails closed and the forms refuse submissions without them. |
 | Contact form recipient | `TEAM_INBOX` | Public pages never read `players`, so contact messages don't go to a player address. Not stored in `messages`. |
 | Reminders | Captain button any time; daily cron (`vercel.json`, 13:00 UTC) once per match within 5 days | Non-responders = active players with no availability row |
+| Registrations | Captain dashboard: Invite only (no Decline) | Invite adds the player and sends "Welcome to the Stamford Stags" (logged as kind `invite`). Its button opens `/sign-in?email=…` prefilled, so the invite never expires; a fresh magic link is one tap away. |
+| Short matches | Upcoming current-season scheduled matches where available < players needed | Dashboard KPI and "needs attention"; same numbers as the Availability team view. |
 | Calendar feeds | `/api/calendar/public.ics` (matches + public events) and `/api/calendar/<token>.ics` (everything, per player) | ICS lengths: match 3h, event without an end 1h, `usta_deadline`/`registration` without an end all-day. Feeds cover 120 days back to 400 days ahead. Tokens reset from the player's profile. |
 | Photos | Member gallery `/photos` (captain uploads and manages inline); public `/gallery` and Home show public photos only | New uploads are private. The captain picks the Home team photo in the gallery (confirm step; it becomes public). Home crops it 16:10 on phones, 4:3 on desktop, focal point 50% 35%. |
 | Standings | Rank, team, W, L, lines won, lines lost, entered by hand | Sorted by the captain's rank; the Stags row is highlighted on Results. |
@@ -215,5 +225,9 @@ Match `design-reference/`. Those files are the approved look.
       Captain area; public + personal ICS feeds validated; photo upload with EXIF/GPS strip verified; captain-chosen Home
       team photo; results, season stats and standings; checked at 390px by DOM measurement (Chrome screenshots failed);
       185 pgTAP assertions + anon REST/Storage check pass)
-- [ ] Phase 9 — Captain dashboard and polish
+- [x] Phase 9 — Captain dashboard and polish (dashboard from Captain.dc.html with DB-backed KPIs, needs-attention reminders,
+      Invite + welcome email, quick actions, recent messages; empty states, styled 404/error pages, focus rings, skip link,
+      drawer focus trap, 44px targets, 4.5:1 text; manifest + SS-mark icons. Lighthouse mobile on a production build:
+      Home 96, Match Center 91, Availability 95, all 100 accessibility / best practices / SEO; 195 pgTAP assertions +
+      anon REST/Storage check pass)
 - [ ] Phase 10 — Deploy (before go-live: real Turnstile keys, verified Resend domain + `EMAIL_MODE=live` on Production only, `CRON_SECRET`, custom SMTP for auth emails)

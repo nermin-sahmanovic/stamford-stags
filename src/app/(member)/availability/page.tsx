@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { SectionHeading, Skeleton } from "@/components/ui";
+import { CheckIcon, MatchesIcon } from "@/components/shell/icons";
+import { EmptyState, SectionHeading, Skeleton } from "@/components/ui";
 import { requireMember } from "@/lib/auth";
 import { formatDayOfMonth, formatMonthShort, formatShortDate, formatTime, formatWeekday } from "@/lib/format";
 import { homeAwayLabel, opponentLabel } from "@/lib/matches/display";
@@ -29,9 +30,11 @@ async function Board() {
 
   if (matches.length === 0) {
     return (
-      <p className="mt-4 rounded-[14px] border border-line bg-white p-4 text-[15px] text-slate-600">
-        No upcoming matches yet. Check back once the captain posts the schedule.
-      </p>
+      <div className="mt-4">
+        <EmptyState icon={MatchesIcon} title="No matches to answer yet">
+          Once the captain posts the schedule, you can say whether you can play with one tap.
+        </EmptyState>
+      </div>
     );
   }
 
@@ -125,7 +128,9 @@ function TeamView({ team }: { team: TeamRow[] }) {
                   </ul>
                 </details>
               ) : (
-                <p className="mt-2 text-[13px] text-slate-600">Everyone has replied.</p>
+                <p className="mt-2 flex items-center gap-1.5 text-[13px] font-semibold text-blue-700">
+                  <CheckIcon size={14} /> Everyone has replied.
+                </p>
               )}
             </li>
           );

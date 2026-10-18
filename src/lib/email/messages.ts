@@ -12,7 +12,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // after its CRON_SECRET check.
 
 export type Audience = Database["public"]["Enums"]["message_audience"];
-export type MessageKind = "message" | "reminder" | "lineup";
+export type MessageKind = "message" | "reminder" | "lineup" | "invite";
 export type Recipient = { playerId: string; name: string; email: string };
 export type LinkKind = "availability" | "lineup";
 
@@ -254,5 +254,48 @@ export async function sendAvailabilityReminder(input: {
     links: "availability",
     render: (_r, buttons) =>
       teamMessage({ subject, body, senderName: input.senderName, match, buttons, buttonsIntro: "Can you play?" }),
+  });
+}
+
+// --- Invites -----------------------------------------------------------------------
+
+/**
+ * Welcome email for a player the captain just added from a Join-form registration. The button
+ * opens the sign-in page with their email filled in, so it never expires: one tap there sends
+ * a fresh magic link.
+ */
+export async function sendInviteEmail(input: {
+  player: Recipient;
+  senderId: string;
+  senderName: string;
+  replyTo: string;
+}): Promise<DeliverResult> {
+  const firstName = input.player.name.split(/\s+/)[0] ?? input.player.name;
+  const subject = "Welcome to the Stamford Stags";
+  const body = [
+    `Hi ${firstName},`,
+    "Thanks for signing up. You're now on the Stamford Stags roster.",
+    "Sign in to the team site to see the schedule, set your availability and find your lineup spot. Sign-in is by email link, so there's no password to remember.",
+  ].join("\n\n");
+  const signIn = `${siteUrl()}/sign-in?email=${encodeURIComponent(input.player.email)}`;
+
+  return deliverMessage({
+    senderId: input.senderId,
+    replyTo: input.replyTo,
+    audience: "custom",
+    kind: "invite",
+    matchId: null,
+    subject,
+    body,
+    recipients: [input.player],
+    links: null,
+    render: () =>
+      teamMessage({
+        subject,
+        body,
+        senderName: input.senderName,
+        buttons: [{ label: "Sign in to the team site", href: signIn }],
+        buttonsIntro: "Get started:",
+      }),
   });
 }

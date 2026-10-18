@@ -51,7 +51,7 @@ export default function JoinPage() {
               </li>
             ))}
           </ol>
-          <p className="mx-1 mt-2 text-[13px] text-slate-500">
+          <p className="mx-1 mt-2 text-[13px] text-slate-600">
             Steps 1–4 happen in the form below. The captain handles 5 and 6.
           </p>
         </section>

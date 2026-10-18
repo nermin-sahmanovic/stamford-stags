@@ -11,7 +11,6 @@ export function SiteHeader() {
         <Link
           href="/"
           className="flex items-center gap-2.5 no-underline"
-          aria-label="Stamford Stags home"
         >
           <span
             aria-hidden="true"

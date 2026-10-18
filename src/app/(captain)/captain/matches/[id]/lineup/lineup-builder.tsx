@@ -260,7 +260,7 @@ export function LineupBuilder({
                       <button
                         type="button"
                         onClick={() => edit(() => setSeats((prev) => ({ ...prev, [key]: null })))}
-                        className="flex w-11 shrink-0 items-center justify-center rounded-[10px] text-slate-500 hover:bg-slate-100"
+                        className="flex w-11 shrink-0 items-center justify-center rounded-[10px] text-slate-600 hover:bg-slate-100"
                       >
                         <CloseIcon size={18} />
                         <span className="sr-only">Clear {label}</span>

@@ -23,7 +23,7 @@ export function MessageRow({ message, href }: { message: MessageListItem; href: 
     >
       <span className="flex items-baseline justify-between gap-3">
         <span className="min-w-0 truncate text-[15px] font-bold">{message.subject}</span>
-        <span className="shrink-0 text-[13px] text-slate-500">{formatShortDate(message.sentAt)}</span>
+        <span className="shrink-0 text-[13px] text-slate-600">{formatShortDate(message.sentAt)}</span>
       </span>
       <span className="mt-0.5 block text-[13px] text-slate-600">
         {AUDIENCE_LABELS[message.audience]} · {message.recipientCount} recipient{message.recipientCount === 1 ? "" : "s"}

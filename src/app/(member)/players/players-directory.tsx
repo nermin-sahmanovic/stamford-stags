@@ -54,7 +54,7 @@ export function PlayersDirectory({
     <div className="flex flex-col gap-3">
       <label className="relative block">
         <span className="sr-only">Search players by name</span>
-        <SearchIcon size={18} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-slate-500" />
+        <SearchIcon size={18} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-slate-600" />
         <input
           type="search"
           value={query}
@@ -159,7 +159,7 @@ function PlayerCard({ player, showReply }: { player: DirectoryPlayer; showReply:
 function FilterGroup({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div role="group" aria-label={label}>
-      <div className="mb-1.5 text-[12px] font-bold tracking-[0.08em] text-slate-500 uppercase">{label}</div>
+      <div className="mb-1.5 text-[12px] font-bold tracking-[0.08em] text-slate-600 uppercase">{label}</div>
       {/* One scrolling row per group on phones, so the list starts higher up. */}
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] md:mx-0 md:flex-wrap md:px-0">
         {children}

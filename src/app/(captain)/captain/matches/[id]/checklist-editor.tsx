@@ -81,7 +81,7 @@ export function ChecklistEditor({ matchId, items }: { matchId: string; items: Ch
                   ) : (
                     <span className="size-6 shrink-0 rounded-[7px] border-2 border-muted" />
                   )}
-                  <span className={item.done ? "text-[15px] text-slate-500 line-through" : "text-[15px] font-medium"}>
+                  <span className={item.done ? "text-[15px] text-slate-600 line-through" : "text-[15px] font-medium"}>
                     {item.label}
                   </span>
                 </button>

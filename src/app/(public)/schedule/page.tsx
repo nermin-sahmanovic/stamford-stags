@@ -77,7 +77,7 @@ async function Schedule({ searchParams }: { searchParams: SearchParams }) {
               key={value}
               href={href}
               aria-current={view === value ? "page" : undefined}
-              className={`flex h-10 items-center justify-center rounded-[9px] text-[15px] no-underline ${
+              className={`flex h-11 items-center justify-center rounded-[9px] text-[15px] no-underline ${
                 view === value ? "bg-white font-bold text-navy" : "font-semibold text-slate-600 hover:text-navy"
               }`}
             >
@@ -158,7 +158,7 @@ function Agenda({ items, member }: { items: CalendarItem[]; member: boolean }) {
     <div className="flex flex-col gap-5">
       {[...months].map(([month, monthItems]) => (
         <section key={month} aria-label={month}>
-          <h2 className="mb-2 text-[13px] font-bold tracking-[0.08em] text-slate-500 uppercase">{month}</h2>
+          <h2 className="mb-2 text-[13px] font-bold tracking-[0.08em] text-slate-600 uppercase">{month}</h2>
           <ul className="grid gap-2.5 md:grid-cols-2">
             {monthItems.map((item) => (
               <li key={`${item.kind}-${item.id}`}>

@@ -23,3 +23,22 @@ body {
   background: var(--color-ground);
   color: var(--color-navy);
 }
+
+/*
+ * Keyboard focus: a visible ring everywhere, court blue on light surfaces and ball green on
+ * navy ones. In the base layer, so a component's own focus-visible:* utilities win over it.
+ */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-court);
+    outline-offset: 2px;
+  }
+  .bg-navy :focus-visible,
+  .bg-navy:focus-visible {
+    outline-color: var(--color-ball);
+  }
+  /* The skip link moves focus to <main>; it doesn't need a ring around the whole page. */
+  main:focus-visible {
+    outline: none;
+  }
+}

@@ -36,11 +36,11 @@ export function ScheduleCard({
           isMatch ? "bg-navy text-white" : "bg-ground text-navy"
         }`}
       >
-        <span className={`text-[12px] font-bold tracking-[0.08em] uppercase ${isMatch ? "text-ball" : "text-slate-500"}`}>
+        <span className={`text-[12px] font-bold tracking-[0.08em] uppercase ${isMatch ? "text-ball" : "text-slate-600"}`}>
           {formatMonthShort(item.startsAt)}
         </span>
         <span className="font-display text-[28px] leading-none font-bold">{formatDayOfMonth(item.startsAt)}</span>
-        <span className={`text-[12px] font-semibold ${isMatch ? "text-slate-300" : "text-slate-500"}`}>
+        <span className={`text-[12px] font-semibold ${isMatch ? "text-slate-300" : "text-slate-600"}`}>
           {formatWeekday(item.startsAt)}
         </span>
       </div>

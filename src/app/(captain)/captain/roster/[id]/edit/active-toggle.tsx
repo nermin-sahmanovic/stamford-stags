@@ -10,7 +10,7 @@ export function ActiveToggle({ id, active, isMe }: { id: string; active: boolean
 
   if (isMe) {
     return (
-      <p className="text-[13px] text-slate-500">
+      <p className="text-[13px] text-slate-600">
         You can&apos;t deactivate yourself. Another captain can.
       </p>
     );

@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import Link from "next/link";
+import type { ComponentType, ReactNode } from "react";
 
 // Small shared pieces from design-reference. Cards: 1px line border, 14-16px radius, no shadow.
 
@@ -52,7 +53,7 @@ export function StatCard({
 }) {
   return (
     <div className="rounded-[14px] border border-line bg-white p-3.5">
-      <div className="text-[12px] font-semibold tracking-[0.06em] text-slate-500 uppercase">
+      <div className="text-[12px] font-semibold tracking-[0.06em] text-slate-600 uppercase">
         {label}
       </div>
       <div className="mt-0.5 font-display text-[36px] leading-[1.05] font-bold">{value}</div>
@@ -63,7 +64,7 @@ export function StatCard({
 
 /** Inputs, selects and textareas: 16px text so iOS doesn't zoom. */
 export const fieldClass =
-  "w-full min-w-0 rounded-[10px] border border-slate-300 bg-white px-3.5 text-base text-navy placeholder:text-slate-400 focus:border-court focus:outline-2 focus:outline-offset-0 focus:outline-court/30 aria-[invalid=true]:border-warn";
+  "w-full min-w-0 rounded-[10px] border border-slate-300 bg-white px-3.5 text-base text-navy placeholder:text-slate-500 focus:border-court focus:outline-2 focus:outline-offset-0 focus:outline-court/30 aria-[invalid=true]:border-warn";
 
 export const inputClass = `${fieldClass} h-12`;
 
@@ -91,5 +92,47 @@ export function HoneypotField() {
 export function Skeleton({ className = "" }: { className?: string }) {
   return (
     <div className={`animate-pulse rounded-[14px] bg-line motion-reduce:animate-none ${className}`} />
+  );
+}
+
+/**
+ * A friendly "nothing here yet" card: icon, short title, one line of help and an optional next
+ * step. Tone "good" is for happy empties like "Everyone has replied".
+ */
+export function EmptyState({
+  icon: Icon,
+  title,
+  children,
+  action,
+  tone = "neutral",
+}: {
+  icon: ComponentType<{ size?: number; className?: string }>;
+  title: string;
+  children?: ReactNode;
+  action?: { href: string; label: string };
+  tone?: "neutral" | "good";
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-[14px] border border-line bg-white p-4">
+      <span
+        className={`flex size-10 shrink-0 items-center justify-center rounded-full ${
+          tone === "good" ? "bg-blue-50 text-court" : "bg-ground text-slate-600"
+        }`}
+      >
+        <Icon size={20} />
+      </span>
+      <div className="min-w-0">
+        <p className="text-[16px] font-bold text-navy">{title}</p>
+        {children ? <p className="mt-0.5 text-[14px] text-slate-600">{children}</p> : null}
+        {action ? (
+          <Link
+            href={action.href}
+            className="mt-2 inline-flex min-h-11 items-center text-[14px] font-semibold text-court"
+          >
+            {action.label} →
+          </Link>
+        ) : null}
+      </div>
+    </div>
   );
 }

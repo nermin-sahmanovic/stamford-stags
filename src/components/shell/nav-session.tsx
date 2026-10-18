@@ -36,7 +36,6 @@ export async function SessionAccount() {
   return (
     <Link
       href="/players/me"
-      aria-label={`Signed in as ${name}${roleLabel ? `, ${roleLabel}` : ""}. Your profile`}
       className="flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-[10px] px-1 no-underline hover:bg-navy-2 md:px-2"
     >
       <span
@@ -44,6 +43,11 @@ export async function SessionAccount() {
         className="flex size-8 items-center justify-center rounded-full border-[1.5px] border-ball bg-navy-2 text-[12px] font-bold text-ball"
       >
         {initials(name)}
+      </span>
+      {/* Spoken name: no aria-label, so it can't disagree with what's on screen (WCAG 2.5.3). */}
+      <span className="sr-only">
+        Your profile, signed in as {name}
+        {roleLabel ? `, ${roleLabel}` : ""}
       </span>
       <span aria-hidden="true" className="hidden max-w-36 truncate text-[14px] font-semibold text-white md:block">
         {shortName(name)}
