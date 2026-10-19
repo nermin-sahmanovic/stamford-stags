@@ -3,3 +3,8 @@ scripts/dev-login.ts
 scripts/seed-photos.ts
 scripts/lighthouse.sh
 scripts/lighthouse-chrome.ps1
+scripts/test-rls.mjs
+scripts/test-anon-access.ps1
+scripts/linked-ref.mjs
+scripts/prod-setup.mjs
+scripts/check-dns.mjs

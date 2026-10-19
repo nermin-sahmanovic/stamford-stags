@@ -22,6 +22,15 @@ $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $root = Split-Path -Parent $PSScriptRoot
+
+# Fixtures are written through the linked CLI, so refuse unless it points at Stags-Dev (same rule as scripts/linked-ref.mjs).
+$devRef = 'jljyylzalwiczrimaguz'
+$refFile = Join-Path $root 'supabase\.temp\project-ref'
+$linked = if (Test-Path $refFile) { (Get-Content $refFile -Raw).Trim() } else { 'nothing' }
+if ($linked -ne $devRef) {
+  throw "Refusing to run: the Supabase CLI is linked to $linked, not Stags-Dev ($devRef). Relink: npx supabase link --project-ref $devRef"
+}
+
 $envFile = Join-Path $root '.env.local'
 if (-not (Test-Path $envFile)) { throw ".env.local not found at $envFile" }
 

@@ -37,80 +37,100 @@ the same computer. To tap them on your phone, set it to your computer's LAN addr
 
 ---
 
-## Part 2: Get a domain, about 10 minutes plus DNS time
+## Part 2: The domain
 
-You need a domain you control to send real team email (e.g. `stamfordstags.com`).
-
-1. Buy one at a registrar. **Cloudflare Registrar** (at cost, free DNS) is the simplest; Porkbun and Namecheap
-   are fine too. About $10–15 a year for a `.com`.
-2. Keep its DNS at the registrar (or move it to Cloudflare). You only need to add a few records.
-
-Tip: send from a **subdomain** such as `mail.stamfordstags.com`. It keeps team email reputation separate from
-anything else on the main domain, and the DNS records don't collide with a website or other mail later.
+The team domain is **`stamfordstags.com`**, registered at Namecheap with DNS in Namecheap's
+**Advanced DNS** tab. Email goes out **From `Stamford Stags <captain@stamfordstags.com>`**.
+Resend handles bounces on its own **`send.`** subdomain (the return path), so its records never collide with
+the website (apex A / `www` CNAME) or with Namecheap's email forwarding (apex MX).
 
 ---
 
 ## Part 3: Verify the domain in Resend, about 10 minutes plus up to a few hours for DNS
 
-1. Resend → **Domains** → **Add domain** → enter `mail.stamfordstags.com` (or your domain). Region: **North
-   Virginia (us-east-1)**, the closest to Stamford.
-2. Resend shows the records to create. **Copy the values from Resend exactly.** They look like this:
+1. Resend → **Domains** → **Add domain** → enter `stamfordstags.com`. Region: **North Virginia (us-east-1)**,
+   the closest to Stamford.
+2. Add these in Namecheap → **Advanced DNS**. **Copy the DKIM value from Resend exactly.**
 
-   | Type | Name (host) | Value | Priority | Why |
+   | Type | Host (Namecheap) | Value | Priority | Why |
    |---|---|---|---|---|
-   | MX  | `send.mail` | `feedback-smtp.us-east-1.amazonses.com` | 10 | Bounce handling (return path) |
-   | TXT | `send.mail` | `v=spf1 include:amazonses.com ~all` | | SPF: Resend may send for you |
-   | TXT | `resend._domainkey.mail` | `p=MIGfMA0GCSq…` (long key) | | DKIM signature |
-   | TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:you@example.com` | | DMARC (recommended; add it yourself) |
+   | MX  | `send` | `feedback-smtp.us-east-1.amazonses.com` | 10 | Bounce handling (return path) |
+   | TXT | `send` | `v=spf1 include:amazonses.com ~all` | | SPF for the return path |
+   | TXT | `resend._domainkey` | `p=MIGfMA0GCSq…` (long key, from Resend) | | DKIM signature |
+   | TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:captain@stamfordstags.com` | | DMARC (add it yourself) |
 
-   - **Name column:** most DNS panels want the host *without* the root domain (`send.mail`, not
-     `send.mail.stamfordstags.com`). Some (GoDaddy) add the root automatically, so don't type it twice.
-   - **Cloudflare:** set each record to **DNS only** (grey cloud), not proxied.
-   - If Resend offers **Auto configure** for your DNS provider, you can use that instead of typing the records.
-3. Back in Resend, click **Verify DNS records**. Most providers take minutes; allow up to 48 hours.
-   The domain turns **Verified** when all records pass.
-4. DMARC: start with `p=none` (monitor only). After a few weeks of clean sending you can tighten it to
-   `p=quarantine`.
+   - **Host column:** Namecheap wants the host *without* the root domain (`send`, not `send.stamfordstags.com`).
+   - **MX records in Namecheap:** the `send` MX goes in the **Mail Settings** section. If Namecheap only
+     allows it with **Custom MX** selected, see Part 3b first, or forwarding to Gmail stops.
+3. Check from the project: `npm run check-dns -- --only=resend`. Then in Resend click **Verify DNS records**.
+   The domain turns **Verified** when all records pass (usually minutes, up to 48 hours).
+4. DMARC: start with `p=none` (monitor only). After a few weeks of clean sending, tighten it to
+   `p=quarantine`. DKIM is signed for `stamfordstags.com` and the return path `send.stamfordstags.com` aligns
+   (relaxed), so team email passes DMARC.
+
+### Part 3b: Namecheap email forwarding (replies reach the captain's Gmail)
+
+Resend only sends. `captain@stamfordstags.com` receives mail through Namecheap's free forwarding:
+
+1. Namecheap → Domain List → `stamfordstags.com` → **Advanced DNS → Mail Settings: Email Forwarding**.
+   That publishes the apex MX records `eforward1`–`eforward5.registrar-servers.com` and the apex SPF
+   `v=spf1 include:spf.efwd.registrar-servers.com ~all`. Keep that SPF record; it's the apex's only SPF.
+2. **Domain → Redirect Email**: add alias `captain` → the captain's Gmail.
+3. The apex MX (forwarding) and `send` MX (Resend) are different hosts, so they don't clash. The only catch is
+   Namecheap's UI: if it won't accept the `send` MX under *Email Forwarding*, switch Mail Settings to
+   **Custom MX**, re-enter the five apex `eforward` MX records exactly as Namecheap had them
+   (`10 eforward1`, `10 eforward2`, `10 eforward3`, `15 eforward4`, `20 eforward5` `.registrar-servers.com`),
+   add the `send` MX, then send a test email from another account to `captain@stamfordstags.com`.
+   If it doesn't reach Gmail, use a free forwarder such as ImprovMX on the apex MX instead; Resend's records
+   stay as they are.
+4. `npm run check-dns -- --only=forwarding` confirms the apex MX and SPF.
 
 ---
 
 ## Part 4: Production keys and settings
 
-1. Resend → **API Keys** → **Create API key**: name `stags-prod`, **Sending access**, restricted to your
-   verified domain. Don't reuse the dev key.
+1. Resend → **API Keys** → **Create API key**: name `stags-prod`, **Sending access**, restricted to
+   `stamfordstags.com`. Don't reuse the dev key. Create a second one, `stags-supabase-smtp`, for Part 6, so
+   either can be revoked alone.
 2. Vercel → your project → **Settings → Environment Variables** (Production):
    ```
-   RESEND_API_KEY=re_...                                  (the prod key)
-   EMAIL_FROM=Stamford Stags <team@mail.stamfordstags.com>
-   TEAM_INBOX=captain@...                                 (a real inbox someone reads)
-   NEXT_PUBLIC_SITE_URL=https://<your production URL>
+   RESEND_API_KEY=re_...                                  (the stags-prod key)
+   EMAIL_FROM=Stamford Stags <captain@stamfordstags.com>
+   TEAM_INBOX=captain@stamfordstags.com                   (forwarded to the captain's Gmail)
+   NEXT_PUBLIC_SITE_URL=https://stamfordstags.com
    CRON_SECRET=<long random string>                       (e.g. `openssl rand -hex 32`)
-   EMAIL_MODE=live                                         ← only here, only at go-live
+   EMAIL_MODE=redirect                                    ← until the smoke test passes; then live
+   EMAIL_DEV_REDIRECT=<the captain's Gmail>
    ```
    For Preview deployments, leave `EMAIL_MODE` unset and set `EMAIL_DEV_REDIRECT`, so previews never
    email the team.
-3. Replies: Resend only sends. Each email's **Reply-To** is the captain who sent it (automatic reminders reply
-   to `TEAM_INBOX`), so player replies land in a real inbox.
+3. Replies: each email's **Reply-To** is the captain who sent it (automatic reminders reply to `TEAM_INBOX`),
+   so player replies land in a real inbox.
 
 ---
 
-## Part 5: Daily reminders (cron)
+## Part 5: Crons
 
-`vercel.json` schedules `GET /api/cron/reminders` daily at 13:00 UTC (9am Eastern in summer, 8am in winter).
-For each scheduled match starting in the next 5 days, it emails players who haven't answered availability,
-**once per match**. The captain's "Send reminder" button can always send another.
+`vercel.json` schedules two daily jobs (Vercel Hobby allows once-a-day jobs, run within the scheduled hour):
 
-- Vercel sends `Authorization: Bearer $CRON_SECRET` automatically once `CRON_SECRET` is set. Without it the
-  route always returns 401.
-- Test it by hand:
-  ```bash
-  curl -i http://localhost:3000/api/cron/reminders                                    # 401
-  curl -i -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/reminders
-  ```
+- `GET /api/cron/reminders` at 13:00 UTC (9am Eastern in summer, 8am in winter). For each scheduled match
+  starting in the next 5 days, it emails players who haven't answered availability, **once per match**.
+  Only a reminder that went out live counts: while `EMAIL_MODE` isn't `live`, the cron sends a redirected
+  copy each day, and the real one goes out after go-live. The captain's "Send reminder" button can always
+  send another.
+- `GET /api/cron/keep-alive` at 09:00 UTC. One cheap public read, so the free Supabase project never pauses
+  for inactivity in the off-season.
+
+Vercel sends `Authorization: Bearer $CRON_SECRET` automatically once `CRON_SECRET` is set. Without it both
+routes always return 401. Test by hand:
+```bash
+curl -i http://localhost:3000/api/cron/reminders                                    # 401
+curl -i -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/reminders
+```
 
 ---
 
-## Part 6 (optional, Phase 10): Supabase sign-in emails through Resend
+## Part 6: Supabase sign-in emails through Resend
 
 Supabase's built-in mailer is heavily rate-limited. Point it at Resend's SMTP instead:
 
@@ -121,18 +141,15 @@ Supabase dashboard → **Authentication → Emails → SMTP Settings** → enabl
 | Host | `smtp.resend.com` |
 | Port | `465` |
 | Username | `resend` |
-| Password | a Resend API key (Sending access, your domain) |
-| Sender email | `signin@mail.stamfordstags.com` |
+| Password | the `stags-supabase-smtp` Resend key |
+| Sender email | `captain@stamfordstags.com` |
 | Sender name | `Stamford Stags` |
 
-Then raise the auth email rate limit under **Authentication → Rate Limits**.
+Then raise the email rate limit under **Authentication → Rate Limits** (for example 100 per hour), and paste
+the branded templates from `supabase/templates/` (see `docs/LAUNCH-CHECKLIST.md`, step 2).
 
 ---
 
 ## Go-live checklist
 
-- [ ] Domain shows **Verified** in Resend (SPF, DKIM, MX; DMARC added)
-- [ ] Production `RESEND_API_KEY`, `EMAIL_FROM`, `TEAM_INBOX`, `NEXT_PUBLIC_SITE_URL`, `CRON_SECRET` set in Vercel
-- [ ] `EMAIL_MODE=live` set on **Production only**
-- [ ] A test message to **Selected players → just yourself** arrives from the team address, with no `[DEV →]` prefix
-- [ ] Supabase custom SMTP configured (Part 6)
+The full list (smoke test, switch to live, rollback) is in `docs/LAUNCH-CHECKLIST.md`.

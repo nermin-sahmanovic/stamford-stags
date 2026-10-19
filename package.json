@@ -10,7 +10,9 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test:rls": "node scripts/test-rls.mjs",
     "dev-login": "cross-env NODE_ENV=development node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/dev-login.ts",
-    "seed-photos": "cross-env NODE_ENV=development node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/seed-photos.ts"
+    "seed-photos": "cross-env NODE_ENV=development node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/seed-photos.ts",
+    "prod-setup": "node scripts/prod-setup.mjs",
+    "check-dns": "node scripts/check-dns.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

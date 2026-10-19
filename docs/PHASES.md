@@ -255,7 +255,7 @@ Walk me through and script where possible:
 - Supabase cloud project, `supabase db push`, and the auth redirect URLs.
 - Custom SMTP for auth emails.
 - Vercel project, env vars from .env.example, custom domain.
-- The cron schedule.
-- The Graph app registration, scoped to the team mailbox only.
+- The cron schedule (daily reminders, plus a keep-alive so the free Supabase tier doesn't pause).
+- Resend domain verification (SPF, DKIM, DMARC) and email forwarding for the team address.
 - A production smoke-test checklist.
 ```

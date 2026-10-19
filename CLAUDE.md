@@ -74,6 +74,11 @@ npm run seed-photos
 # the script signs in via dev-login and measures as that player. Reports land in .lighthouse/ (ignored).
 bash scripts/lighthouse.sh home http://localhost:3000/
 bash scripts/lighthouse.sh matches http://localhost:3000/matches player03@example.com
+
+# Production (Phase 10; full walkthrough in docs/LAUNCH-CHECKLIST.md). test:rls and the anon check refuse
+# unless the CLI is linked to Stags-Dev; prod-setup refuses on Stags-Dev. Relink to dev after any prod work.
+npm run prod-setup -- --confirm-ref <prod-ref> --season-name "…" --ntrp 3.5 --max-roster 16 --playoff-min 2 --captain-name "…" --dry-run
+npm run check-dns                             # read-only: Vercel, Resend and forwarding records (--only=site|resend|forwarding)
 ```
 
 Secrets live in `.env.local` (git-ignored): project URL, publishable key (in

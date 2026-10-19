@@ -1,23 +1,10 @@
-import { timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { NextResponse, type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
+import { cronAuthorized as authorized, cronJson as json } from "@/lib/cron";
 import { sendAvailabilityReminder } from "@/lib/email/messages";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const WINDOW_DAYS = 5;
-
-const json = (body: object, status = 200) =>
-  NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
-
-/** Vercel cron sends `Authorization: Bearer $CRON_SECRET`. No secret configured → always 401. */
-function authorized(request: NextRequest) {
-  const secret = process.env.CRON_SECRET?.trim();
-  const header = request.headers.get("authorization") ?? "";
-  if (!secret) return false;
-  const expected = Buffer.from(`Bearer ${secret}`);
-  const actual = Buffer.from(header);
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
-}
 
 /**
  * Daily: for scheduled matches starting within 5 days, remind players who haven't answered
@@ -36,13 +23,15 @@ export async function GET(request: NextRequest) {
       .eq("status", "scheduled")
       .gt("starts_at", now.toISOString())
       .lte("starts_at", until.toISOString()),
-    // A reminder that was only logged (email not set up) doesn't count: send a real one later.
+    // Only a reminder that reached players counts. Logged or redirected ones (email not set up,
+    // or EMAIL_MODE not yet "live") don't use up the match's automatic reminder.
     admin
       .from("messages")
       .select("match_id")
       .eq("kind", "reminder")
       .eq("automated", true)
-      .neq("status", "logged")
+      .eq("delivery", "live")
+      .neq("status", "failed")
       .not("match_id", "is", null),
   ]);
   if (matches.error || done.error) {

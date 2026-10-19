@@ -3,10 +3,13 @@
 // `supabase test db` needs Docker (it runs pg_prove in a container). `supabase db query --linked`
 // does not, but it only returns the last result set. So we capture each assertion's TAP line
 // into a temp table and swap the closing finish() for a report; the transaction still ends in ROLLBACK.
-import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { queryLinkedFile, requireDevLink } from "./linked-ref.mjs";
+
+// The assertions expect seed.sql data, so they only make sense on Stags-Dev.
+requireDevLink("test:rls");
 
 const source = readFileSync("supabase/tests/rls.sql", "utf8");
 const plan = /^select plan\(\d+\);$/m;
@@ -29,26 +32,9 @@ const script = source
 const file = join(mkdtempSync(join(tmpdir(), "stags-rls-")), "rls.sql");
 writeFileSync(file, script);
 
-let outputs;
-try {
-  const stdout = execFileSync("npx", ["supabase", "db", "query", "--linked", "-f", file], {
-    encoding: "utf8",
-    shell: process.platform === "win32",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  outputs = [stdout];
-} catch (err) {
-  outputs = [err.stdout ?? "", err.stderr ?? ""];
-}
-
-// The CLI prints one JSON object (rows or error) amid status lines like "Initialising login role...".
-const json = outputs
-  .flatMap((text) => text.split(/\r?\n(?=\{)/))
-  .map((chunk) => chunk.slice(chunk.indexOf("{")).replace(/\}[^}]*$/, "}"))
-  .map((chunk) => { try { return JSON.parse(chunk); } catch { return null; } })
-  .find(Boolean);
+const { json, raw } = queryLinkedFile(file);
 if (!json) {
-  console.error(outputs.join("\n"));
+  console.error(raw);
   process.exit(1);
 }
 if (json.error) {
