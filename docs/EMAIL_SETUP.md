@@ -41,8 +41,8 @@ the same computer. To tap them on your phone, set it to your computer's LAN addr
 
 The team domain is **`stamfordstags.com`**, registered at Namecheap with DNS in Namecheap's
 **Advanced DNS** tab. Email goes out **From `Stamford Stags <captain@stamfordstags.com>`**.
-Resend handles bounces on its own **`send.`** subdomain (the return path), so its records never collide with
-the website (apex A / `www` CNAME) or with ImprovMX's email forwarding (apex MX, Part 3b).
+Resend handles bounces on its own **`send.`** and **`rsend.`** subdomains (the return path), so its records
+never collide with the website (apex A / `www` CNAME) or with ImprovMX's email forwarding (apex MX, Part 3b).
 
 ---
 
@@ -50,22 +50,25 @@ the website (apex A / `www` CNAME) or with ImprovMX's email forwarding (apex MX,
 
 1. Resend → **Domains** → **Add domain** → enter `stamfordstags.com`. Region: **North Virginia (us-east-1)**,
    the closest to Stamford.
-2. Add these in Namecheap → **Advanced DNS**. **Copy the DKIM value from Resend exactly.**
+2. Add these in Namecheap → **Advanced DNS → Host Records**. **Copy every value from Resend's dashboard
+   exactly**; it is the source of truth.
 
-   | Type | Host (Namecheap) | Value | Priority | Why |
-   |---|---|---|---|---|
-   | MX  | `send` | `feedback-smtp.us-east-1.amazonses.com` | 10 | Bounce handling (return path) |
-   | TXT | `send` | `v=spf1 include:amazonses.com ~all` | | SPF for the return path |
-   | TXT | `resend._domainkey` | `p=MIGfMA0GCSq…` (long key, from Resend) | | DKIM signature |
-   | TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:captain@stamfordstags.com` | | DMARC (add it yourself) |
+   | Type | Host (Namecheap) | Value | Why |
+   |---|---|---|---|
+   | CNAME | `send` | `send.forge.rmta.net` | Return path: bounce handling and SPF (Resend Forge) |
+   | CNAME | `rsend` | `rsend.forge.rmta.net` | Second return path (Resend Forge) |
+   | TXT | `resend._domainkey` | `p=MIGfMA0GCSq…` (long key, from Resend) | DKIM signature |
+   | TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:captain@stamfordstags.com` | DMARC (add it yourself) |
 
    - **Host column:** Namecheap wants the host *without* the root domain (`send`, not `send.stamfordstags.com`).
-   - **MX records in Namecheap:** the `send` MX goes in the **Mail Settings** section, which must be on
-     **Custom MX**. That also means forwarding goes through ImprovMX (Part 3b), not Namecheap.
+   - **Resend's public Namecheap guide is out of date** (checked 2026-10-19). It still lists an `MX send` →
+     `feedback-smtp.us-east-1.amazonses.com` and a `TXT send` SPF for Amazon SES. In 2026 Resend moved
+     sending to its own "Forge" infrastructure (`forge.rmta.net`), and the dashboard now asks for the two
+     CNAMEs above instead. A CNAME can't share a host with other records, so delete any old `send` MX or TXT.
 3. Check from the project: `npm run check-dns -- --only=resend`. Then in Resend click **Verify DNS records**.
    The domain turns **Verified** when all records pass (usually minutes, up to 48 hours).
 4. DMARC: start with `p=none` (monitor only). After a few weeks of clean sending, tighten it to
-   `p=quarantine`. DKIM is signed for `stamfordstags.com` and the return path `send.stamfordstags.com` aligns
+   `p=quarantine`. DKIM is signed for `stamfordstags.com` and the return path on `send.`/`rsend.` aligns
    (relaxed), so team email passes DMARC.
 
 ### Part 3b: Email forwarding through ImprovMX (replies reach the captain's Gmail)
@@ -73,17 +76,19 @@ the website (apex A / `www` CNAME) or with ImprovMX's email forwarding (apex MX,
 Resend only sends. `captain@stamfordstags.com` receives mail through [ImprovMX](https://improvmx.com)'s free
 forwarding.
 
-**Why not Namecheap's own forwarding:** Namecheap only allows MX records (Resend needs one on `send`) with Mail
-Settings on **Custom MX**. Switching to Custom MX deletes Namecheap's forwarding aliases, even if the
-`eforward` MX records are re-entered by hand. Mail to the alias then bounces with
-`554 5.7.1 Relay access denied`. (We tried this on 2026-10-19.)
+**Why not Namecheap's own forwarding:** during setup, Resend's older records needed an MX on `send`, and
+Namecheap only allows MX records with Mail Settings on **Custom MX**. Switching to Custom MX deletes Namecheap's
+forwarding aliases, even if the `eforward` MX records are re-entered by hand. Mail to the alias then bounces
+with `554 5.7.1 Relay access denied` (tried on 2026-10-19). Resend's current records are CNAMEs only, so
+Namecheap forwarding would work again, but ImprovMX is already set up and keeps forwarding independent of the
+registrar.
 
 1. ImprovMX: create a free account, add domain `stamfordstags.com`, alias `captain` → the captain's Gmail.
 2. Namecheap → **Advanced DNS**, Mail Settings stays on **Custom MX**:
    - Apex MX: `@` → `mx1.improvmx.com` (10) and `@` → `mx2.improvmx.com` (20). No other `@` MX records.
    - Apex SPF (Host Records, TXT `@`): `v=spf1 include:spf.improvmx.com ~all`. It must be the only `v=spf1` on `@`.
-   - Leave the Resend records on `send`, `resend._domainkey` and `_dmarc` as they are. The apex MX
-     (ImprovMX) and the `send` MX (Resend) are different hosts, so they never clash.
+   - Leave the Resend records on `send`, `rsend`, `resend._domainkey` and `_dmarc` as they are. The apex
+     (ImprovMX) and Resend's subdomains are different hosts, so they never clash.
 3. `npm run check-dns -- --only=forwarding`, then ImprovMX's dashboard shows the domain as active.
 4. Test from an account that **isn't** the captain's Gmail (Gmail hides your own mail when it comes back
    through forwarding).

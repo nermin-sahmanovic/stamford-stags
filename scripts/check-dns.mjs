@@ -35,20 +35,21 @@ const checks = [
       return { ok: got.some((c) => /(^|\.)vercel-dns(-\d+)?\.com$/i.test(c)), got };
     },
   },
+  // Resend "Forge" (2026): two CNAMEs replace the old send MX + SPF TXT pair on Amazon SES.
   {
     group: "resend",
-    name: `MX send.${DOMAIN} → feedback-smtp.us-east-1.amazonses.com`,
+    name: `CNAME send.${DOMAIN} → send.forge.rmta.net`,
     run: async () => {
-      const got = await mx(`send.${DOMAIN}`);
-      return { ok: got.some((r) => r.endsWith(" feedback-smtp.us-east-1.amazonses.com")), got };
+      const got = await resolver.resolveCname(`send.${DOMAIN}`);
+      return { ok: got.length === 1 && got[0].toLowerCase() === "send.forge.rmta.net", got };
     },
   },
   {
     group: "resend",
-    name: `TXT send.${DOMAIN} (SPF include:amazonses.com)`,
+    name: `CNAME rsend.${DOMAIN} → rsend.forge.rmta.net`,
     run: async () => {
-      const got = (await txt(`send.${DOMAIN}`)).filter((t) => t.startsWith("v=spf1"));
-      return { ok: got.length === 1 && got[0].includes("include:amazonses.com"), got };
+      const got = await resolver.resolveCname(`rsend.${DOMAIN}`);
+      return { ok: got.length === 1 && got[0].toLowerCase() === "rsend.forge.rmta.net", got };
     },
   },
   {

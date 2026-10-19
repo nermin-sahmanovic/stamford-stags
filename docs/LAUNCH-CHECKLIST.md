@@ -47,14 +47,16 @@ the Vercel and Supabase dashboards or a password manager. Never into chat, commi
 
 ## 3. Resend domain (Namecheap → Advanced DNS)
 
-Add domain `stamfordstags.com` in Resend (region us-east-1), then add:
+Add domain `stamfordstags.com` in Resend (region us-east-1), then add these Host Records, copying values from
+Resend's dashboard. Resend's public Namecheap guide still shows the old Amazon SES `send` MX + TXT; it's out
+of date (see `docs/EMAIL_SETUP.md`, Part 3).
 
-| Type | Host | Value | Priority |
-|---|---|---|---|
-| MX  | `send` | `feedback-smtp.us-east-1.amazonses.com` | 10 |
-| TXT | `send` | `v=spf1 include:amazonses.com ~all` | |
-| TXT | `resend._domainkey` | the DKIM key, copied exactly from Resend | |
-| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:captain@stamfordstags.com` | |
+| Type | Host | Value |
+|---|---|---|
+| CNAME | `send` | `send.forge.rmta.net` |
+| CNAME | `rsend` | `rsend.forge.rmta.net` |
+| TXT | `resend._domainkey` | the DKIM key, copied exactly from Resend |
+| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:captain@stamfordstags.com` |
 
 - [ ] `npm run check-dns -- --only=resend` all ok, then **Verify** in Resend → Verified.
 - [ ] Create two Resend keys, both **Sending access, stamfordstags.com only**: `stags-prod` (Vercel) and
@@ -62,13 +64,12 @@ Add domain `stamfordstags.com` in Resend (region us-east-1), then add:
 
 ## 4. Email forwarding (captain@ → Gmail)
 
-Namecheap's own forwarding doesn't work alongside Resend: the `send` MX needs **Custom MX**, and switching to
-Custom MX drops Namecheap's aliases ("Relay access denied"). So forwarding goes through ImprovMX
-(`docs/EMAIL_SETUP.md`, Part 3b).
+Forwarding goes through ImprovMX. Switching Namecheap to Custom MX (needed for Resend's older `send` MX)
+dropped Namecheap's aliases ("Relay access denied"); see `docs/EMAIL_SETUP.md`, Part 3b.
 
 - [ ] ImprovMX (free): add `stamfordstags.com`, alias `captain` → the captain's Gmail.
 - [ ] Namecheap, Mail Settings on **Custom MX**: apex MX `mx1.improvmx.com` (10) and `mx2.improvmx.com` (20)
-      only, plus the Resend `send` MX. Apex SPF TXT `@` = `v=spf1 include:spf.improvmx.com ~all` (only one).
+      only. Apex SPF TXT `@` = `v=spf1 include:spf.improvmx.com ~all` (only one).
 - [ ] `npm run check-dns -- --only=forwarding` all ok, and ImprovMX shows the domain active.
 - [ ] Send a test email from an account that isn't the captain's Gmail to `captain@stamfordstags.com`; it
       reaches Gmail.
@@ -179,5 +180,5 @@ Clean up the test registration and test match before inviting the team.
 | A bad migration | Never edit an applied migration. Write a new migration that undoes it, `db push --dry-run`, then `db push` while linked to stags-prod. | varies |
 | Bad data (wrong import, deleted rows) | The free tier has daily backups but no point-in-time recovery. Before any risky change, take a dump: `npx supabase db dump --linked --data-only -f backup-YYYYMMDD.sql` (keep it out of git). | varies |
 | Sign-in emails failing | Supabase → SMTP Settings: check the Resend key and sender; turn custom SMTP off temporarily to fall back to the built-in mailer (rate-limited). | 2 min |
-| Domain or DNS problem | Players can still use the `*.vercel.app` URL, but sign-in links follow the Supabase Site URL. Restore the records from this checklist. The original Namecheap records were `www` CNAME `parkingpage.namecheap.com` and an `@` URL redirect (parking). Mail: apex MX `mx1`/`mx2.improvmx.com` (10/20) and SPF `include:spf.improvmx.com`; Resend on `send`, `resend._domainkey`, `_dmarc`. | DNS TTL |
+| Domain or DNS problem | Players can still use the `*.vercel.app` URL, but sign-in links follow the Supabase Site URL. Restore the records from this checklist. The original Namecheap records were `www` CNAME `parkingpage.namecheap.com` and an `@` URL redirect (parking). Mail: apex MX `mx1`/`mx2.improvmx.com` (10/20) and SPF `include:spf.improvmx.com`; Resend: CNAMEs `send` → `send.forge.rmta.net` and `rsend` → `rsend.forge.rmta.net`, plus `resend._domainkey` and `_dmarc`. | DNS TTL |
 | Supabase project paused | Dashboard → Restore. The keep-alive cron should prevent this; check Vercel's cron logs. | minutes |
