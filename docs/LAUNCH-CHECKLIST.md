@@ -62,12 +62,16 @@ Add domain `stamfordstags.com` in Resend (region us-east-1), then add:
 
 ## 4. Email forwarding (captain@ → Gmail)
 
-- [ ] Namecheap → **Mail Settings: Email Forwarding**, alias `captain` → the captain's Gmail. That publishes
-      the apex MX `eforward1–5.registrar-servers.com` and SPF `v=spf1 include:spf.efwd.registrar-servers.com ~all`.
-- [ ] If the `send` MX needs **Custom MX**: re-enter the five apex eforward MX records exactly
-      (10/10/10/15/20) plus the `send` MX. Details in `docs/EMAIL_SETUP.md`, Part 3b.
-- [ ] `npm run check-dns -- --only=forwarding` all ok.
-- [ ] Send a test email from another account to `captain@stamfordstags.com`; it reaches Gmail.
+Namecheap's own forwarding doesn't work alongside Resend: the `send` MX needs **Custom MX**, and switching to
+Custom MX drops Namecheap's aliases ("Relay access denied"). So forwarding goes through ImprovMX
+(`docs/EMAIL_SETUP.md`, Part 3b).
+
+- [ ] ImprovMX (free): add `stamfordstags.com`, alias `captain` → the captain's Gmail.
+- [ ] Namecheap, Mail Settings on **Custom MX**: apex MX `mx1.improvmx.com` (10) and `mx2.improvmx.com` (20)
+      only, plus the Resend `send` MX. Apex SPF TXT `@` = `v=spf1 include:spf.improvmx.com ~all` (only one).
+- [ ] `npm run check-dns -- --only=forwarding` all ok, and ImprovMX shows the domain active.
+- [ ] Send a test email from an account that isn't the captain's Gmail to `captain@stamfordstags.com`; it
+      reaches Gmail.
 
 ## 5. Turnstile and Vercel
 
@@ -175,5 +179,5 @@ Clean up the test registration and test match before inviting the team.
 | A bad migration | Never edit an applied migration. Write a new migration that undoes it, `db push --dry-run`, then `db push` while linked to stags-prod. | varies |
 | Bad data (wrong import, deleted rows) | The free tier has daily backups but no point-in-time recovery. Before any risky change, take a dump: `npx supabase db dump --linked --data-only -f backup-YYYYMMDD.sql` (keep it out of git). | varies |
 | Sign-in emails failing | Supabase → SMTP Settings: check the Resend key and sender; turn custom SMTP off temporarily to fall back to the built-in mailer (rate-limited). | 2 min |
-| Domain or DNS problem | Players can still use the `*.vercel.app` URL, but sign-in links follow the Supabase Site URL. Restore the records from this checklist. The original Namecheap records were `www` CNAME `parkingpage.namecheap.com` and an `@` URL redirect (parking), plus the forwarding MX and SPF. | DNS TTL |
+| Domain or DNS problem | Players can still use the `*.vercel.app` URL, but sign-in links follow the Supabase Site URL. Restore the records from this checklist. The original Namecheap records were `www` CNAME `parkingpage.namecheap.com` and an `@` URL redirect (parking). Mail: apex MX `mx1`/`mx2.improvmx.com` (10/20) and SPF `include:spf.improvmx.com`; Resend on `send`, `resend._domainkey`, `_dmarc`. | DNS TTL |
 | Supabase project paused | Dashboard → Restore. The keep-alive cron should prevent this; check Vercel's cron logs. | minutes |

@@ -42,7 +42,7 @@ the same computer. To tap them on your phone, set it to your computer's LAN addr
 The team domain is **`stamfordstags.com`**, registered at Namecheap with DNS in Namecheap's
 **Advanced DNS** tab. Email goes out **From `Stamford Stags <captain@stamfordstags.com>`**.
 Resend handles bounces on its own **`send.`** subdomain (the return path), so its records never collide with
-the website (apex A / `www` CNAME) or with Namecheap's email forwarding (apex MX).
+the website (apex A / `www` CNAME) or with ImprovMX's email forwarding (apex MX, Part 3b).
 
 ---
 
@@ -60,30 +60,33 @@ the website (apex A / `www` CNAME) or with Namecheap's email forwarding (apex MX
    | TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:captain@stamfordstags.com` | | DMARC (add it yourself) |
 
    - **Host column:** Namecheap wants the host *without* the root domain (`send`, not `send.stamfordstags.com`).
-   - **MX records in Namecheap:** the `send` MX goes in the **Mail Settings** section. If Namecheap only
-     allows it with **Custom MX** selected, see Part 3b first, or forwarding to Gmail stops.
+   - **MX records in Namecheap:** the `send` MX goes in the **Mail Settings** section, which must be on
+     **Custom MX**. That also means forwarding goes through ImprovMX (Part 3b), not Namecheap.
 3. Check from the project: `npm run check-dns -- --only=resend`. Then in Resend click **Verify DNS records**.
    The domain turns **Verified** when all records pass (usually minutes, up to 48 hours).
 4. DMARC: start with `p=none` (monitor only). After a few weeks of clean sending, tighten it to
    `p=quarantine`. DKIM is signed for `stamfordstags.com` and the return path `send.stamfordstags.com` aligns
    (relaxed), so team email passes DMARC.
 
-### Part 3b: Namecheap email forwarding (replies reach the captain's Gmail)
+### Part 3b: Email forwarding through ImprovMX (replies reach the captain's Gmail)
 
-Resend only sends. `captain@stamfordstags.com` receives mail through Namecheap's free forwarding:
+Resend only sends. `captain@stamfordstags.com` receives mail through [ImprovMX](https://improvmx.com)'s free
+forwarding.
 
-1. Namecheap → Domain List → `stamfordstags.com` → **Advanced DNS → Mail Settings: Email Forwarding**.
-   That publishes the apex MX records `eforward1`–`eforward5.registrar-servers.com` and the apex SPF
-   `v=spf1 include:spf.efwd.registrar-servers.com ~all`. Keep that SPF record; it's the apex's only SPF.
-2. **Domain → Redirect Email**: add alias `captain` → the captain's Gmail.
-3. The apex MX (forwarding) and `send` MX (Resend) are different hosts, so they don't clash. The only catch is
-   Namecheap's UI: if it won't accept the `send` MX under *Email Forwarding*, switch Mail Settings to
-   **Custom MX**, re-enter the five apex `eforward` MX records exactly as Namecheap had them
-   (`10 eforward1`, `10 eforward2`, `10 eforward3`, `15 eforward4`, `20 eforward5` `.registrar-servers.com`),
-   add the `send` MX, then send a test email from another account to `captain@stamfordstags.com`.
-   If it doesn't reach Gmail, use a free forwarder such as ImprovMX on the apex MX instead; Resend's records
-   stay as they are.
-4. `npm run check-dns -- --only=forwarding` confirms the apex MX and SPF.
+**Why not Namecheap's own forwarding:** Namecheap only allows MX records (Resend needs one on `send`) with Mail
+Settings on **Custom MX**. Switching to Custom MX deletes Namecheap's forwarding aliases, even if the
+`eforward` MX records are re-entered by hand. Mail to the alias then bounces with
+`554 5.7.1 Relay access denied`. (We tried this on 2026-10-19.)
+
+1. ImprovMX: create a free account, add domain `stamfordstags.com`, alias `captain` → the captain's Gmail.
+2. Namecheap → **Advanced DNS**, Mail Settings stays on **Custom MX**:
+   - Apex MX: `@` → `mx1.improvmx.com` (10) and `@` → `mx2.improvmx.com` (20). No other `@` MX records.
+   - Apex SPF (Host Records, TXT `@`): `v=spf1 include:spf.improvmx.com ~all`. It must be the only `v=spf1` on `@`.
+   - Leave the Resend records on `send`, `resend._domainkey` and `_dmarc` as they are. The apex MX
+     (ImprovMX) and the `send` MX (Resend) are different hosts, so they never clash.
+3. `npm run check-dns -- --only=forwarding`, then ImprovMX's dashboard shows the domain as active.
+4. Test from an account that **isn't** the captain's Gmail (Gmail hides your own mail when it comes back
+   through forwarding).
 
 ---
 

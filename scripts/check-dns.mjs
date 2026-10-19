@@ -1,5 +1,5 @@
 // Read-only check of the stamfordstags.com DNS records the deploy needs (Vercel, Resend,
-// Namecheap email forwarding). Asks public resolvers directly, so a stale local cache doesn't lie.
+// ImprovMX email forwarding). Asks public resolvers directly, so a stale local cache doesn't lie.
 //
 //   npm run check-dns
 //   npm run check-dns -- --only=resend      (groups: site, resend, forwarding)
@@ -69,18 +69,19 @@ const checks = [
   },
   {
     group: "forwarding",
-    name: `MX ${DOMAIN} → Namecheap forwarding (eforward*.registrar-servers.com)`,
+    name: `MX ${DOMAIN} → ImprovMX (10 mx1, 20 mx2 .improvmx.com)`,
     run: async () => {
       const got = await mx(DOMAIN);
-      return { ok: got.length > 0 && got.every((r) => /eforward\d\.registrar-servers\.com$/.test(r)), got };
+      const want = ["10 mx1.improvmx.com", "20 mx2.improvmx.com"];
+      return { ok: got.length === want.length && want.every((w) => got.includes(w)), got };
     },
   },
   {
     group: "forwarding",
-    name: `TXT ${DOMAIN} (one SPF, include:spf.efwd.registrar-servers.com)`,
+    name: `TXT ${DOMAIN} (one SPF, include:spf.improvmx.com)`,
     run: async () => {
       const got = (await txt(DOMAIN)).filter((t) => t.startsWith("v=spf1"));
-      return { ok: got.length === 1 && got[0].includes("include:spf.efwd.registrar-servers.com"), got };
+      return { ok: got.length === 1 && got[0].includes("include:spf.improvmx.com"), got };
     },
   },
 ];
