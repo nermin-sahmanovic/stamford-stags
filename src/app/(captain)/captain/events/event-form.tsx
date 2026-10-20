@@ -97,7 +97,7 @@ export function EventForm({
 
       <label className="flex flex-col gap-1.5 text-[14px] font-semibold">
         Location
-        <input type="text" placeholder="Stamford Tennis Center" className={inputClass} {...field("location")} />
+        <input type="text" placeholder="Solaris Racquet Club" className={inputClass} {...field("location")} />
         <FieldError id="location-error" message={errors.location} />
       </label>
 

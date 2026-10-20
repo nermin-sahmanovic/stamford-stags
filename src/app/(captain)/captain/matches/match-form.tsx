@@ -95,7 +95,7 @@ export function MatchForm({
 
       <label className="flex flex-col gap-1.5 text-[14px] font-semibold">
         Venue
-        <input type="text" placeholder="Stamford Tennis Center" className={inputClass} {...field("location_name")} />
+        <input type="text" placeholder="Solaris Racquet Club" className={inputClass} {...field("location_name")} />
         <FieldError id="location_name-error" message={errors.location_name} />
       </label>
 

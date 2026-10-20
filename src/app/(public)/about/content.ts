@@ -17,12 +17,8 @@ export const league = {
 
 export const locations = [
   {
-    name: "Stamford Tennis Center",
-    note: "Home courts for most of our home matches.",
-  },
-  {
-    name: "Darien Indoor Tennis",
-    note: "Regular away venue in the fall season.",
+    name: "Solaris Racquet Club, Stamford",
+    note: "Our home courts.",
   },
 ];
 
